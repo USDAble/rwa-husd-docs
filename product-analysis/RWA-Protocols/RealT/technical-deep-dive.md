@@ -28,27 +28,126 @@
 
 ### 1.1 核心定位
 
+**官方定义** (来自 RealT 白皮书):
+
+> "RealT is a platform that allows investors to buy into fractional, tokenized ownership of rental properties, primarily in the United States, with returns paid out daily in the form of rent."
+
 **RealT 是一个零售友好的房地产代币化平台**,允许投资者以低门槛(最低$50)投资美国房地产,并每日获得租金分红。
 
 **核心价值主张**:
 
 -   **低门槛**: 最低$50 即可投资房地产
--   **每日分红**: 租金每日自动分配到投资者钱包
--   **流动性**: 通过 RMM(RealT Market Maker)提供二级市场流动性
+-   **每日分红**: 租金每日自动分配到投资者钱包(USDC)
+-   **流动性**: 通过 RMM(RealT Market Maker)和 Yam 提供二级市场流动性
 -   **透明性**: 所有房产信息和租金收入完全透明
+-   **DeFi 集成**: 支持抵押借贷(最高 50% LTV)
+
+**部署网络**: Gnosis Chain (原 xDai Chain)
 
 ---
 
 ### 1.2 核心架构
 
-RealT 采用**ERC20 代币 + LLC 法律结构**:
+RealT 采用**ERC-20 代币 + LLC 法律结构 + DeFi 集成**:
 
--   **RealToken**: 每个房产对应一个 ERC20 代币
--   **LLC**: 每个房产由独立的 LLC 持有
--   **Rent Distribution**: 自动化租金分配合约
--   **RMM**: 自动做市商提供流动性
+#### 1.2.1 智能合约层
 
-**核心合约**: RealToken, RentDistribution, RMM, PropertyRegistry
+-   **RealToken**: 每个房产对应一个 ERC-20 代币
+-   **RentDistribution**: 自动化租金分配合约
+-   **PropertyRegistry**: 房产信息注册表
+-   **RMM (RealT Market Maker)**: 自动做市商提供流动性
+
+#### 1.2.2 法律结构层
+
+-   **LLC Series**: 每个房产由独立的 LLC Series 持有
+-   **代币持有者**: 拥有 LLC 的所有权份额
+-   **合规性**: 符合美国证券法(Reg D, Reg S)
+
+#### 1.2.3 DeFi 集成层
+
+-   **Yam**: 去中心化交易平台
+-   **抵押借贷**: 最高 50% LTV (Loan-to-Value)
+-   **流动性池**: 通过 RMM 提供深度流动性
+
+---
+
+### 1.3 架构关系图
+
+```mermaid
+graph TB
+    subgraph "法律结构层"
+        LLC[LLC Series]
+        Property[实体房产]
+    end
+
+    subgraph "智能合约层"
+        RealToken[RealToken<br/>ERC-20]
+        RentDist[RentDistribution<br/>租金分配]
+        Registry[PropertyRegistry<br/>房产注册]
+        RMM[RMM<br/>自动做市商]
+    end
+
+    subgraph "DeFi集成层"
+        Yam[Yam<br/>去中心化交易]
+        Lending[抵押借贷<br/>50% LTV]
+    end
+
+    subgraph "用户层"
+        Investor[投资者]
+    end
+
+    LLC --> Property
+    LLC --> RealToken
+    RealToken --> RentDist
+    RealToken --> Registry
+    RealToken --> RMM
+    RealToken --> Yam
+    RealToken --> Lending
+    Investor --> RealToken
+    RentDist --> Investor
+
+    style RealToken fill:#4CAF50
+    style RentDist fill:#2196F3
+    style RMM fill:#FF9800
+    style Yam fill:#9C27B0
+```
+
+---
+
+### 1.4 官方资源
+
+**核心文档**:
+
+-   [RealT 白皮书 (2019)](https://realt.co/wp-content/uploads/2019/05/RealToken_White_Paper_US_v03.pdf)
+-   [私募备忘录 (2019)](https://realt.co/wp-content/uploads/2019/04/Private-Placement-Memorandum-Real-Token-Primary-V17-Final.pdf)
+
+**Medium 官方博客**:
+
+-   [How to benefit from the deep liquidity of the RealToken ecosystem (2024-01)](https://medium.com/realtplatform/how-to-benefit-from-the-deep-liquidity-of-the-realtoken-ecosystem-e236136f8e06)
+-   [A Guide to DeFi in the Real Estate Market (2023-12)](https://medium.com/realtplatform/a-guide-to-defi-decentralized-finance-in-the-real-estate-market-b664748a3380)
+-   [Introducing RealT: Tokenizing Real Estate on Ethereum (2019-05)](https://medium.com/@TrustlessState/introducing-realt-tokenizing-real-estate-on-ethereum-9b8a995dc3fe)
+
+**GitHub**:
+
+-   [RealToken-Community](https://github.com/RealToken-Community)
+
+---
+
+### 1.5 验证说明
+
+**验证方法**: 混合验证 (基于白皮书 + Medium 文章 + ERC-20 标准)
+
+**资源限制**:
+
+-   ⚠️ RealT 没有公开的官方智能合约源代码仓库
+-   ⚠️ 白皮书发布于 2019 年,部分技术细节可能已更新
+-   ✅ Medium 官方博客提供了最新的 DeFi 功能说明(2023-2024)
+
+**验证策略**:
+
+1. **核心功能** (RealToken, RentDistribution): 基于白皮书验证 → ⚠️ 基于白皮书(2019)
+2. **DeFi 功能** (RMM, Yam): 基于 Medium 文章验证 → ⚠️ 基于 Medium 文章(2024)
+3. **其他功能**: 基于 ERC-20 标准验证 → ⚠️ 基于 ERC-20 标准
 
 ---
 
