@@ -28,14 +28,19 @@
 
 ### 1.1 核心定位
 
+**官方定义** (来自 Plume Network 官方文档):
+
+> "Plume is the first fully integrated modular L2 blockchain dedicated to all real-world assets (RWAs), both private credit and tokenized real-world assets."
+
 **Plume Network 是首个专为 RWA(真实世界资产)设计的 Layer 2 区块链**,提供完整的资产代币化、DeFi 和合规基础设施。
 
 **核心价值主张**:
 
 -   **RWA 专用 L2**: 专为 RWA 优化的区块链基础设施
 -   **Arc 技术栈**: 模块化的资产代币化框架
--   **Nest 钱包**: 内置合规的智能钱包
+-   **Nest 钱包**: 内置合规的智能合约钱包
 -   **低成本**: 极低的 Gas 费用,适合高频交易
+-   **模块化设计**: 支持多种资产类型 (房地产、艺术品、碳信用等)
 
 ---
 
@@ -43,28 +48,89 @@
 
 Plume Network 采用**Optimistic Rollup + Arc 技术栈**:
 
+#### 1.2.1 Layer 2 基础设施
+
 -   **Plume L2**: 基于 Optimism 的 Layer 2
+-   **Sequencer**: 交易排序器
+-   **Verifier**: 欺诈证明验证器
+
+#### 1.2.2 资产代币化层
+
 -   **Arc**: 资产代币化框架
--   **Nest**: 智能合约钱包
+-   **ArcFactory**: 代币工厂合约
+-   **ArcToken**: 资产代币合约
+
+#### 1.2.3 用户层
+
+-   **Nest**: 智能合约钱包 (内置合规)
 -   **Bridge**: 跨链桥接协议
 
 **核心合约**: ArcFactory, ArcToken, NestWallet, PlumeBridge
 
 ---
 
+### 1.3 官方资源
+
+**核心文档**:
+
+-   [Plume Network 官方文档](https://docs.plume.org/)
+-   [Arc 技术栈文档](https://docs.plume.org/arc)
+-   [Nest 钱包文档](https://docs.plume.org/nest)
+
+**GitHub**:
+
+-   [Plume Network GitHub](https://github.com/plumenetwork)
+
+---
+
+### 1.4 验证说明
+
+**验证方法**: 基于官方文档验证
+
+**资源限制**:
+
+-   ⚠️ Plume Network 是新兴项目,部分技术细节可能仍在开发中
+-   ⚠️ 官方文档可能不如成熟项目完整
+-   ✅ 官方文档提供了清晰的架构说明
+
+**验证策略**:
+
+1. **核心功能** (Arc, Nest): 基于官方文档验证 → ⚠️ 基于官方文档
+2. **DeFi 功能**: 基于官方文档验证 → ⚠️ 基于官方文档
+3. **其他功能**: 基于 Optimism 标准验证 → ⚠️ 基于 Optimism 标准
+
+---
+
 ## 2. 业务流程 1: 资产代币化
+
+**验证状态**: ⚠️ 基于官方文档
+**官方文档**: [Arc 技术栈文档](https://docs.plume.org/arc)
 
 ### 2.1 流程概述
 
 资产代币化是 Plume Network 的核心功能,通过 Arc 技术栈实现。
 
+**涉及的核心合约** (基于官方文档):
+
+-   **ArcFactory**: 代币工厂合约
+-   **ArcToken**: 资产代币合约
+-   **ArcRegistry**: 资产注册表
+
 **核心步骤**:
 
 1. 资产发行者提交代币化申请
-2. 选择 Arc 模板(房地产、艺术品、碳信用等)
+2. 选择 Arc 模板 (房地产、艺术品、碳信用等)
 3. 配置资产参数
 4. 部署 ArcToken 合约
-5. 开启认购
+5. 注册到 ArcRegistry
+6. 开启认购
+
+**注意事项**:
+
+-   ✅ 支持多种资产类型
+-   ✅ 模块化设计,易于扩展
+-   ✅ 内置合规检查
+-   ✅ 低 Gas 费用
 
 ---
 
@@ -189,6 +255,9 @@ async function uploadToIPFS(metadata: any): Promise<string> {
 
 ## 3. 业务流程 2: 流动性挖矿
 
+**验证状态**: ⚠️ 基于官方文档
+**官方文档**: [Plume Network 官方文档](https://docs.plume.org/)
+
 ### 3.1 流程概述
 
 流动性挖矿激励用户为 RWA 代币提供流动性。
@@ -200,13 +269,28 @@ async function uploadToIPFS(metadata: any): Promise<string> {
 3. 质押 LP 代币到挖矿合约
 4. 获得 PLUME 代币奖励
 
+**注意事项**:
+
+-   ✅ 激励用户提供流动性
+-   ✅ PLUME 代币奖励
+-   ✅ 支持多种 RWA 代币对
+
 ---
 
 ## 4. 业务流程 3: 跨链桥接
 
+**验证状态**: ⚠️ 基于 Optimism 标准
+**官方文档**: [Plume Network 官方文档](https://docs.plume.org/)
+
 ### 4.1 流程概述
 
 跨链桥接允许资产在 Plume L2 和其他链之间转移。
+
+**注意事项**:
+
+-   ✅ 基于 Optimism 标准桥接
+-   ✅ 支持 ETH 和 ERC-20 代币
+-   ✅ 7 天挑战期 (从 L2 到 L1)
 
 **核心步骤**:
 
@@ -254,6 +338,9 @@ function bridgeToPlume(
 
 ## 5. 业务流程 4: DeFi 集成
 
+**验证状态**: ⚠️ 基于官方文档
+**官方文档**: [Plume Network 官方文档](https://docs.plume.org/)
+
 ### 5.1 流程概述
 
 Plume Network 支持 RWA 代币的 DeFi 应用,包括借贷、交易、衍生品等。
@@ -264,9 +351,18 @@ Plume Network 支持 RWA 代币的 DeFi 应用,包括借贷、交易、衍生品
 -   **DEX**: 去中心化交易所
 -   **Derivatives**: RWA 衍生品
 
+**注意事项**:
+
+-   ✅ 支持 RWA 代币作为抵押品
+-   ✅ 低 Gas 费用,适合高频交易
+-   ✅ 内置合规检查
+
 ---
 
 ## 6. 业务流程 5: 治理与质押
+
+**验证状态**: ⚠️ 基于官方文档
+**官方文档**: [Plume Network 官方文档](https://docs.plume.org/)
 
 ### 6.1 流程概述
 
