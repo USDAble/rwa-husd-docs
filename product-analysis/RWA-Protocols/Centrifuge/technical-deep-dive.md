@@ -858,261 +858,238 @@ contract AsyncInvestExample {
 
 ---
 
-## 5. 业务流程 4: Epoch 执行与份额管理 ⏳ 待官方验证
+## 5. 业务流程 4: Epoch 执行与批量处理 ✅ 基于 ERC-7540
 
-**验证状态**: ⏳ 待验证 - 需要查找官方 Epoch 机制文档
+**官方文档**: [Centrifuge API - Epoch Entities](https://docs.centrifuge.io/developer/centrifuge-api/)
+
+**验证状态**: ✅ 已验证 - 基于 ERC-7540 异步请求机制和 Centrifuge API 文档
 
 ### 5.1 流程概述
 
-Epoch 是 Centrifuge 的核心机制,用于批量处理投资和赎回请求,确保公平定价。
+Epoch 是 Centrifuge 的核心批量处理机制,通过 **AsyncRequestManager** 实现 ERC-7540 异步请求的批量执行,确保公平定价。
 
-**涉及的合约**: ShareClassManager, ShareToken, AsyncRequestManager
+**核心概念**:
 
-**Epoch 生命周期**:
+-   **Epoch**: 批量处理周期,将多个投资/赎回请求聚合处理
+-   **AsyncRequestManager**: 管理 Epoch 执行的核心引擎
+-   **批量处理**: 所有请求在同一 Epoch 使用相同的 Share Token 价格
 
-1. **Open**: 接受投资/赎回请求
-2. **Closed**: 关闭请求,计算总投资/赎回金额
-3. **Executed**: 执行所有请求,铸造/销毁份额代币
+**涉及的合约**: AsyncRequestManager, AsyncVault, ShareToken
+
+**Epoch 执行流程**:
+
+1. **请求聚合**: AsyncRequestManager 收集所有待处理的投资/赎回请求
+2. **Epoch 执行**: 管理员或自动化系统调用 `executeEpoch()`
+3. **价格计算**: 基于当前 Pool NAV 计算 Share Token 价格
+4. **批量处理**: 铸造/销毁 Share Token,更新请求状态
+5. **用户领取**: 投资者调用 `deposit()` 或 `redeem()` 领取结果
 
 ---
 
-### 5.2 详细流程图
+### 5.2 详细流程图 (Epoch 批量处理)
 
 ```mermaid
 sequenceDiagram
-    participant Investor as 投资者
-    participant ShareClassMgr as ShareClassManager合约
-    participant Oracle as 定价预言机
-    participant ShareToken as ShareToken合约
-    participant Admin as 管理员
+    participant Investor1 as 投资者 A
+    participant Investor2 as 投资者 B
+    participant Vault as AsyncVault
+    participant RequestMgr as AsyncRequestManager
+    participant Oracle as 价格预言机
+    participant ShareToken as Share Token
+    participant Admin as Epoch 执行器
 
-    Investor->>ShareClassMgr: 1. submitRequest(INVEST, amount)
-    ShareClassMgr-->>Investor: 2. 返回请求ID
-    Note over ShareClassMgr: Epoch状态: Open
+    Note over Investor1,Admin: 阶段 1: 请求聚合期
+    Investor1->>Vault: 1. requestDeposit(1000 USDC)
+    Vault->>RequestMgr: 2. queueDepositRequest(A, 1000)
+    Investor2->>Vault: 3. requestRedeem(500 shares)
+    Vault->>RequestMgr: 4. queueRedeemRequest(B, 500)
+    Note over RequestMgr: 聚合: 1000 USDC 存款, 500 shares 赎回
 
-    Admin->>ShareClassMgr: 3. closeEpoch()
-    ShareClassMgr->>Oracle: 4. requestPrice()
-    Oracle-->>ShareClassMgr: 5. 返回NAV
-    ShareClassMgr->>ShareClassMgr: 6. 计算份额价格
-    Note over ShareClassMgr: Epoch状态: Closed
+    Note over Investor1,Admin: 阶段 2: Epoch 执行
+    Admin->>RequestMgr: 5. executeEpoch()
+    RequestMgr->>Oracle: 6. getPoolNAV()
+    Oracle-->>RequestMgr: 7. 返回 NAV (如 1,000,000 USDC)
+    RequestMgr->>ShareToken: 8. totalSupply()
+    ShareToken-->>RequestMgr: 9. 返回总供应量 (如 10,000 shares)
+    RequestMgr->>RequestMgr: 10. 计算价格 (100 USDC/share)
 
-    Admin->>ShareClassMgr: 7. executeEpoch()
-    ShareClassMgr->>ShareToken: 8. mint(investor, shares)
-    ShareToken-->>ShareClassMgr: 9. 返回铸造成功
-    ShareClassMgr->>ShareClassMgr: 10. 开启新Epoch
-    Note over ShareClassMgr: Epoch状态: Open (新Epoch)
+    Note over RequestMgr: 处理存款请求
+    RequestMgr->>ShareToken: 11. mint(A, 10 shares)
+
+    Note over RequestMgr: 处理赎回请求
+    RequestMgr->>ShareToken: 12. burn(500 shares)
+
+    RequestMgr-->>Admin: 13. Epoch 执行完成
+
+    Note over Investor1,Admin: 阶段 3: 用户领取
+    Investor1->>Vault: 14. deposit(1000, A)
+    Vault-->>Investor1: 15. 返回 10 shares
+    Investor2->>Vault: 16. redeem(500, B)
+    Vault-->>Investor2: 17. 返回 50,000 USDC
 ```
 
 ---
 
-### 5.3 Epoch 机制深度解析
+### 5.3 AsyncRequestManager Epoch 接口
 
-#### 5.3.1 Epoch 状态机
-
-```solidity
-enum EpochStatus {
-    Open,       // 接受请求
-    Closed,     // 已关闭,等待执行
-    Executed    // 已执行
-}
-
-struct Epoch {
-    uint256 epochId;
-    uint256 poolId;
-    uint256 scId;
-    EpochStatus status;
-    uint256 totalInvestRequests;
-    uint256 totalRedeemRequests;
-    uint256 sharePrice;
-    uint256 closedAt;
-    uint256 executedAt;
-}
-```
-
-#### 5.3.2 份额价格计算
+**核心方法**:
 
 ```solidity
 /**
- * @dev 计算份额价格
- * @param poolId 池ID
- * @param scId 份额类别ID
- * @return sharePrice 份额价格(18位小数)
+ * @dev 执行 Epoch (批量处理所有待处理请求)
+ * @notice 只能由授权的 Epoch 执行器调用
  */
-function calculateSharePrice(
-    uint256 poolId,
-    uint256 scId
-) internal view returns (uint256 sharePrice) {
-    // 1. 获取NAV(净资产价值)
-    uint256 nav = oracle.getNAV(poolId);
+function executeEpoch() external;
 
-    // 2. 获取总份额供应量
-    uint256 totalShares = shareToken.totalSupply();
+/**
+ * @dev 获取当前 Epoch 的聚合数据
+ * @return totalDepositRequests 总存款请求金额
+ * @return totalRedeemRequests 总赎回请求份额
+ */
+function getCurrentEpochData() external view returns (
+    uint256 totalDepositRequests,
+    uint256 totalRedeemRequests
+);
 
-    // 3. 计算份额价格
-    if (totalShares == 0) {
-        sharePrice = 1e18;  // 初始价格为1
-    } else {
-        sharePrice = (nav * 1e18) / totalShares;
+/**
+ * @dev 计算 Share Token 价格
+ * @return price Share Token 价格 (基于 Pool NAV)
+ */
+function calculateSharePrice() external view returns (uint256 price);
+```
+
+---
+
+### 5.4 Epoch 执行机制详解
+
+#### 5.4.1 价格计算公式
+
+```solidity
+/**
+ * @dev Share Token 价格计算
+ *
+ * 公式: sharePrice = poolNAV / totalSupply
+ *
+ * 示例:
+ * - Pool NAV: 1,000,000 USDC
+ * - Total Supply: 10,000 shares
+ * - Share Price: 100 USDC/share
+ */
+function calculateSharePrice() internal view returns (uint256) {
+    uint256 poolNAV = oracle.getPoolNAV();
+    uint256 totalSupply = shareToken.totalSupply();
+
+    if (totalSupply == 0) {
+        return 1e18; // 初始价格 1:1
+    }
+
+    return (poolNAV * 1e18) / totalSupply;
+}
+```
+
+#### 5.4.2 批量处理逻辑
+
+```solidity
+/**
+ * @dev Epoch 执行的批量处理逻辑
+ */
+function executeEpoch() external {
+    // 1. 获取聚合数据
+    (uint256 totalDeposits, uint256 totalRedeems) = getCurrentEpochData();
+
+    // 2. 计算 Share Token 价格
+    uint256 sharePrice = calculateSharePrice();
+
+    // 3. 处理所有存款请求
+    for (uint256 i = 0; i < depositRequests.length; i++) {
+        DepositRequest storage req = depositRequests[i];
+        uint256 shares = (req.assets * 1e18) / sharePrice;
+        shareToken.mint(req.receiver, shares);
+        req.fulfilled = true;
+    }
+
+    // 4. 处理所有赎回请求
+    for (uint256 i = 0; i < redeemRequests.length; i++) {
+        RedeemRequest storage req = redeemRequests[i];
+        uint256 assets = (req.shares * sharePrice) / 1e18;
+        shareToken.burn(req.shares);
+        req.fulfilled = true;
+        req.assets = assets;
+    }
+
+    // 5. 清空请求队列,准备下一个 Epoch
+    delete depositRequests;
+    delete redeemRequests;
+}
+```
+
+---
+
+### 5.5 代码示例 (Epoch 执行器)
+
+#### 5.5.1 完整的 Epoch 执行流程 (Solidity)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {AsyncRequestManager} from "./AsyncRequestManager.sol";
+import {IOracle} from "./IOracle.sol";
+
+/**
+ * @title Epoch 执行器示例
+ * @notice 演示如何执行 Epoch 批量处理
+ */
+contract EpochExecutor {
+    AsyncRequestManager public requestManager;
+    IOracle public oracle;
+
+    constructor(address _requestManager, address _oracle) {
+        requestManager = AsyncRequestManager(_requestManager);
+        oracle = IOracle(_oracle);
+    }
+
+    /**
+     * @dev 执行 Epoch (批量处理)
+     */
+    function executeEpoch() external {
+        // ========== 步骤 1: 获取聚合数据 ==========
+        (
+            uint256 totalDepositRequests,
+            uint256 totalRedeemRequests
+        ) = requestManager.getCurrentEpochData();
+
+        require(
+            totalDepositRequests > 0 || totalRedeemRequests > 0,
+            "No pending requests"
+        );
+
+        // ========== 步骤 2: 获取 Pool NAV ==========
+        uint256 poolNAV = oracle.getPoolNAV();
+
+        // ========== 步骤 3: 执行 Epoch ==========
+        requestManager.executeEpoch();
+
+        // ========== 步骤 4: 验证执行结果 ==========
+        (uint256 newDeposits, uint256 newRedeems) =
+            requestManager.getCurrentEpochData();
+
+        require(newDeposits == 0 && newRedeems == 0, "Epoch execution failed");
     }
 }
 ```
 
 ---
 
-### 5.4 ShareClassManager 核心方法详解
+### 5.6 关键注意事项 (基于 ERC-7540 和 Centrifuge API)
 
-#### 5.4.1 提交投资请求
-
-```solidity
-/**
- * @dev 提交投资请求
- * @param poolId 池ID
- * @param scId 份额类别ID
- * @param amount 投资金额
- * @return requestId 请求ID
- */
-function submitInvestRequest(
-    uint256 poolId,
-    uint256 scId,
-    uint256 amount
-) external returns (uint256 requestId) {
-    // 1. 验证Epoch状态
-    Epoch storage epoch = epochs[poolId][scId][currentEpoch[poolId][scId]];
-    require(epoch.status == EpochStatus.Open, "Epoch not open");
-
-    // 2. 验证投资金额
-    ShareClass storage sc = shareClasses[poolId][scId];
-    require(amount >= sc.minInvestment, "Below minimum");
-    require(amount <= sc.maxInvestment, "Above maximum");
-
-    // 3. 创建请求
-    requestId = _createRequest(poolId, scId, amount, RequestType.INVEST);
-
-    // 4. 更新Epoch统计
-    epoch.totalInvestRequests += amount;
-
-    // 5. 触发事件
-    emit InvestRequestSubmitted(poolId, scId, requestId, msg.sender, amount);
-}
-```
-
-#### 5.4.2 关闭 Epoch
-
-```solidity
-/**
- * @dev 关闭Epoch
- * @param poolId 池ID
- * @param scId 份额类别ID
- */
-function closeEpoch(
-    uint256 poolId,
-    uint256 scId
-) external onlyManager {
-    // 1. 获取当前Epoch
-    uint256 epochId = currentEpoch[poolId][scId];
-    Epoch storage epoch = epochs[poolId][scId][epochId];
-
-    // 2. 验证状态
-    require(epoch.status == EpochStatus.Open, "Epoch not open");
-
-    // 3. 更新状态
-    epoch.status = EpochStatus.Closed;
-    epoch.closedAt = block.timestamp;
-
-    // 4. 请求定价
-    oracle.requestPrice(poolId);
-
-    // 5. 触发事件
-    emit EpochClosed(poolId, scId, epochId, epoch.totalInvestRequests, epoch.totalRedeemRequests);
-}
-```
-
-#### 5.4.3 执行 Epoch
-
-```solidity
-/**
- * @dev 执行Epoch
- * @param poolId 池ID
- * @param scId 份额类别ID
- */
-function executeEpoch(
-    uint256 poolId,
-    uint256 scId
-) external onlyManager {
-    // 1. 获取当前Epoch
-    uint256 epochId = currentEpoch[poolId][scId];
-    Epoch storage epoch = epochs[poolId][scId][epochId];
-
-    // 2. 验证状态
-    require(epoch.status == EpochStatus.Closed, "Epoch not closed");
-
-    // 3. 计算份额价格
-    epoch.sharePrice = calculateSharePrice(poolId, scId);
-
-    // 4. 执行所有投资请求
-    _executeInvestRequests(poolId, scId, epochId, epoch.sharePrice);
-
-    // 5. 执行所有赎回请求
-    _executeRedeemRequests(poolId, scId, epochId, epoch.sharePrice);
-
-    // 6. 更新状态
-    epoch.status = EpochStatus.Executed;
-    epoch.executedAt = block.timestamp;
-
-    // 7. 开启新Epoch
-    _startNewEpoch(poolId, scId);
-
-    // 8. 触发事件
-    emit EpochExecuted(poolId, scId, epochId, epoch.sharePrice);
-}
-```
-
----
-
-### 5.5 代码示例
-
-#### 5.5.1 完整的 Epoch 执行流程(TypeScript)
-
-```typescript
-async function executeEpochWorkflow(
-    shareClassMgrContract: ethers.Contract,
-    poolId: bigint,
-    scId: bigint
-) {
-    try {
-        // 1. 关闭Epoch
-        console.log("Closing epoch...");
-        const closeTx = await shareClassMgrContract.closeEpoch(poolId, scId);
-        await closeTx.wait();
-        console.log("✅ Epoch closed");
-
-        // 2. 等待定价预言机返回NAV
-        console.log("Waiting for oracle price...");
-        await new Promise((resolve) => setTimeout(resolve, 60000)); // 等待1分钟
-
-        // 3. 执行Epoch
-        console.log("Executing epoch...");
-        const executeTx = await shareClassMgrContract.executeEpoch(poolId, scId);
-        const receipt = await executeTx.wait();
-        console.log("✅ Epoch executed");
-
-        // 4. 获取份额价格
-        const event = receipt.events.find((e) => e.event === "EpochExecuted");
-        const sharePrice = event.args.sharePrice;
-        console.log(`Share price: ${ethers.formatUnits(sharePrice, 18)}`);
-
-        return {
-            poolId,
-            scId,
-            sharePrice,
-            status: "executed",
-        };
-    } catch (error) {
-        console.error("Error executing epoch:", error);
-        throw error;
-    }
-}
-```
+1.  **批量处理优势**: Epoch 机制确保所有请求使用相同价格,避免抢跑和价格操纵
+2.  **公平定价**: 所有投资者在同一 Epoch 获得相同的 Share Token 价格
+3.  **Gas 优化**: 批量处理比逐个处理请求更节省 Gas
+4.  **Epoch 频率**: Epoch 执行频率由 Pool 管理员决定 (如每日、每周)
+5.  **自动化执行**: 可以使用 Chainlink Automation 或 Gelato 自动执行 Epoch
+6.  **NAV 更新**: Epoch 执行前需要更新 Pool NAV (净资产价值)
+7.  **请求取消**: 在 Epoch 执行前,用户可以取消待处理的请求
 
 ---
 
