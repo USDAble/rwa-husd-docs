@@ -60,6 +60,77 @@ DigiShares 采用**White-label Platform + Compliance Infrastructure 架构**:
 -   **Liquidity Management**: 流动性管理
 -   **Trading Platform**: 交易平台
 
+#### 1.2.4 系统架构图
+
+```mermaid
+graph TB
+    subgraph "资产层"
+        A1[住宅地产]
+        A2[商业地产]
+        A3[工业地产]
+    end
+
+    subgraph "法律层"
+        L1[SPV/LLC]
+        L2[托管机构]
+        L3[FINRA监管<br/>进行中]
+    end
+
+    subgraph "DigiShares白标平台"
+        P1[资产代币化模块]
+        P2[KYC/AML验证]
+        P3[电子文档工作流<br/>电子签名]
+        P4[智能合约部署]
+        P5[二级市场交易]
+        P6[公司治理与分红]
+    end
+
+    subgraph "区块链层"
+        B1[Ethereum]
+        B2[ERC-20代币]
+    end
+
+    subgraph "投资者层"
+        I1[认证投资者]
+        I2[零售投资者]
+    end
+
+    A1 & A2 & A3 --> L1
+    L1 --> L2
+    L1 --> P1
+    L3 --> P1
+
+    P1 --> P4
+    P2 --> P3
+    P3 --> P4
+    P4 --> B1
+    B1 --> B2
+
+    B2 --> P5
+    B2 --> P6
+
+    P2 --> I1 & I2
+    P5 --> I1 & I2
+    P6 --> I1 & I2
+
+    style P1 fill:#e1f5ff
+    style P2 fill:#e1f5ff
+    style P3 fill:#e1f5ff
+    style P4 fill:#e1f5ff
+    style P5 fill:#e1f5ff
+    style P6 fill:#e1f5ff
+    style B2 fill:#ffe1e1
+    style L3 fill:#fff4e1
+```
+
+**架构说明**:
+
+-   **资产层**: 专注于房地产代币化 (住宅、商业、工业地产)
+-   **法律层**: SPV/LLC 结构 + 第三方托管 + FINRA 监管(申请中)
+-   **平台层**: 白标平台,可定制品牌,包含完整的代币化工作流
+-   **区块链层**: 基于 Ethereum 的 ERC-20 代币
+-   **投资者层**: 支持认证投资者和零售投资者
+
 ---
 
 ### 1.3 官方资源

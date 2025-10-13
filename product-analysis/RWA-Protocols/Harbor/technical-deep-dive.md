@@ -60,6 +60,77 @@ Harbor 采用**R-Token Standard + Compliance Service 架构**:
 -   **Accreditation**: 投资者认证
 -   **Transfer Restrictions**: 转账限制
 
+#### 1.2.4 系统架构图
+
+```mermaid
+graph TB
+    subgraph "资产层"
+        A1[私募证券]
+        A2[房地产]
+        A3[其他资产]
+    end
+
+    subgraph "Harbor合规平台"
+        H1[R-Token发行模块]
+        H2[Compliance Service<br/>合规服务]
+        H3[Regulator Service<br/>监管服务]
+        H4[Service Registry<br/>服务注册表]
+    end
+
+    subgraph "R-Token层"
+        R1[R-Token合约<br/>ERC-20兼容]
+        R2[Transfer Rules<br/>转账规则]
+        R3[Whitelist<br/>白名单]
+        R4[checkTransfer<br/>合规检查]
+    end
+
+    subgraph "区块链层"
+        B1[Ethereum]
+        B2[ERC-20标准]
+    end
+
+    subgraph "投资者层"
+        I1[认证投资者]
+        I2[机构投资者]
+    end
+
+    A1 & A2 & A3 --> H1
+    H1 --> R1
+    H2 --> R4
+    H3 --> R4
+    H4 --> H2 & H3
+
+    R1 --> R2 & R3 & R4
+    R1 --> B1
+    B1 --> B2
+
+    H2 --> I1 & I2
+    R4 --> I1 & I2
+    B2 --> I1 & I2
+
+    style H1 fill:#e1f5ff
+    style H2 fill:#e1f5ff
+    style H3 fill:#e1f5ff
+    style H4 fill:#e1f5ff
+    style R1 fill:#ffe1e1
+    style R4 fill:#ffe1e1
+    style B2 fill:#fff4e1
+```
+
+**架构说明**:
+
+-   **资产层**: 支持私募证券、房地产等多种资产类型
+-   **合规平台**: Harbor 核心,提供合规服务和监管服务
+-   **R-Token 层**: 开源的 R-Token 标准,ERC-20 兼容 + 合规层
+-   **区块链层**: 基于 Ethereum,完全兼容 ERC-20 标准
+-   **投资者层**: 主要面向认证投资者和机构投资者
+
+**核心特性**:
+
+-   **checkTransfer 函数**: 每次转账前自动调用,确保合规
+-   **Service Registry**: 可配置多个合规服务和监管服务
+-   **Transfer Rules**: 灵活的转账规则,可根据监管要求定制
+
 ---
 
 ### 1.3 官方资源
