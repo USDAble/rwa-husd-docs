@@ -39,34 +39,61 @@
 
 ---
 
-### 1.2 Hub/Spoke 双层架构
+### 1.2 Hub-and-Spoke 架构
 
-Centrifuge 采用**Hub/Spoke 双层架构**:
+**官方文档**: [Centrifuge Protocol Overview](https://docs.centrifuge.io/developer/protocol/overview/)
 
--   **Hub 模块**: 中央管理和协调层(6 个核心合约)
--   **Spoke 模块**: 资产管理和金库操作层(5 个核心组件)
+Centrifuge 采用**Hub-and-Spoke 架构**,实现跨链资产管理:
+
+#### Hub (中心)
+
+-   **Centrifuge Chain**: 基于 Substrate 的 Layer 1 区块链
+-   **职责**: 池管理、权限控制、资产记账、跨链消息协调
+-   **核心功能**: 创建池、管理 Share Classes、控制投资权限、处理资产
+
+#### Spoke (辐条)
+
+-   **EVM Chains**: Ethereum, Base, Arbitrum 等 EVM 兼容链
+-   **职责**: 投资者交互、流动性提供、代币发行
+-   **核心功能**: 部署 Vaults (ERC-7540)、发行 Share Tokens (ERC-20)、处理投资/赎回请求
+
+#### 跨链消息传递
+
+-   Hub 通过 `notifyPool()` 和 `notifyShareClass()` 向 Spoke 链发送消息
+-   Spoke 通过 Vault 接口向 Hub 发送投资/赎回请求
+-   使用 Axelar 等跨链桥实现消息传递
 
 **核心合约**:
 
--   Hub, HubRegistry, ShareClassManager, Accounting, Holdings, HubHelpers
--   BalanceSheet, Vaults, Managers, Escrow, ShareToken
+-   **Hub 层**: Hub, HubRegistry, ShareClassManager, Accounting, Holdings
+-   **Spoke 层**: Vault (ERC-7540), ShareToken (ERC-20), Escrow, Managers
 
 ---
 
-## 2. 业务流程 1: 池创建与配置
+## 2. 业务流程 1: Pool 创建与 Share Class 部署 ✅ 官方验证
+
+**官方文档**: [Create a Pool](https://docs.centrifuge.io/developer/protocol/guides/create-a-pool/)
 
 ### 2.1 流程概述
 
-池创建是 Centrifuge 业务流程的起点,由资产管理者(Issuer)发起,通过 Hub 合约创建一个新的资产池,并配置相关参数。
+Pool 创建是 Centrifuge 业务流程的起点,由资产管理者(Issuer)在 Hub 链上发起,创建一个全局唯一的 Pool,并在多个 Spoke 链上部署 Share Classes (份额类别)。
+
+**核心概念**:
+
+-   **Pool**: 代表一个独特的投资产品或策略,可跨多链存在,由全局唯一的 `poolId` 标识
+-   **Share Class**: 每个 Pool 可以有多个 Share Classes,每个都有自己的 Share Token (如 Junior/Senior Tranches)
+-   **Share Token**: 每个 Share Class 在每个支持的网络上部署为 ERC-20 代币,带有转账钩子以实现权限逻辑
 
 **涉及的合约**: Hub, HubRegistry, ShareClassManager
 
-**核心步骤**:
+**官方流程 (6 步)**:
 
-1. 资产管理者调用 Hub.createPool()创建池
-2. Hub 调用 HubRegistry.registerPool()注册池
-3. Hub 调用 ShareClassManager.createShareClass()创建份额类别
-4. 部署 BalanceSheet、Vault、ShareToken 合约
+1. **派生唯一 Pool ID**: 选择 Hub 网络,使用 `centrifugeId` 派生 `poolId`
+2. **创建 Pool**: 调用 `hub.createPool()` 创建池
+3. **设置元数据**: 调用 `hub.setPoolMetadata()` 设置池描述
+4. **通知 Pool 注册**: 调用 `hub.notifyPool()` 向目标链发送池注册消息
+5. **添加 Share Class**: 调用 `hub.addShareClass()` 创建份额类别
+6. **部署 Share Token**: 调用 `hub.notifyShareClass()` 在目标链部署 ERC-20 代币
 
 ---
 
@@ -74,328 +101,284 @@ Centrifuge 采用**Hub/Spoke 双层架构**:
 
 ```mermaid
 sequenceDiagram
-    participant Issuer as 资产管理者
-    participant Hub as Hub合约
-    participant HubRegistry as HubRegistry合约
-    participant ShareClassMgr as ShareClassManager合约
-    participant BalanceSheet as BalanceSheet合约
-    participant Vault as Vault合约
-    participant ShareToken as ShareToken合约
+    participant Issuer as 资产管理者 (Issuer)
+    participant Hub as Hub 合约 (Centrifuge Chain)
+    participant HubRegistry as HubRegistry
+    participant ShareClassMgr as ShareClassManager
+    participant Bridge as 跨链桥 (Axelar)
+    participant Spoke as Spoke 链 (Ethereum/Base)
+    participant Vault as Vault (ERC-7540)
+    participant ShareToken as Share Token (ERC-20)
 
-    Issuer->>Hub: 1. createPool(poolId, metadata)
-    Hub->>HubRegistry: 2. registerPool(poolId)
-    HubRegistry-->>Hub: 3. 返回注册成功
-    Hub->>ShareClassMgr: 4. createShareClass(poolId, scId, config)
-    ShareClassMgr-->>Hub: 5. 返回份额类别创建成功
-    Hub->>BalanceSheet: 6. deployBalanceSheet(poolId)
-    BalanceSheet-->>Hub: 7. 返回BalanceSheet地址
-    Hub->>Vault: 8. deployVault(poolId, scId)
-    Vault-->>Hub: 9. 返回Vault地址
-    Hub->>ShareToken: 10. deployShareToken(poolId, scId)
-    ShareToken-->>Hub: 11. 返回ShareToken地址
-    Hub-->>Issuer: 12. 返回池创建成功
+    Note over Issuer,Hub: 步骤 1-2: 创建 Pool
+    Issuer->>Hub: 1. poolId = hubRegistry.poolId(centrifugeId, 1)
+    Issuer->>Hub: 2. createPool(poolId, manager, currency)
+    Hub->>HubRegistry: registerPool(poolId)
+    HubRegistry-->>Hub: Pool 注册成功
+
+    Note over Issuer,Hub: 步骤 3: 设置元数据
+    Issuer->>Hub: 3. setPoolMetadata(poolId, metadata)
+    Hub-->>Issuer: 元数据设置成功
+
+    Note over Issuer,Spoke: 步骤 4: 通知 Spoke 链
+    Issuer->>Hub: 4. notifyPool(poolId, centrifugeId)
+    Hub->>Bridge: 发送跨链消息
+    Bridge->>Spoke: 转发 Pool 注册消息
+    Spoke-->>Issuer: Pool 在 Spoke 链注册成功
+
+    Note over Issuer,ShareToken: 步骤 5-6: 添加 Share Class 并部署代币
+    Issuer->>ShareClassMgr: 5. scId = previewNextShareClassId(poolId)
+    Issuer->>Hub: 6a. addShareClass(poolId, name, symbol, salt)
+    Hub->>ShareClassMgr: 创建 Share Class
+    ShareClassMgr-->>Hub: Share Class 创建成功
+
+    Issuer->>Hub: 6b. notifyShareClass(poolId, scId, centrifugeId, hook)
+    Hub->>Bridge: 发送跨链消息
+    Bridge->>Spoke: 转发 Share Class 部署消息
+    Spoke->>Vault: 部署 Vault (ERC-7540)
+    Spoke->>ShareToken: 部署 Share Token (ERC-20)
+    ShareToken-->>Issuer: Share Token 部署成功
 ```
 
 ---
 
-### 2.3 Hub 合约详解
+### 2.3 Hub 合约详解 (官方接口)
 
-**职责**: 中央池管理合约,聚合并暴露所有核心池功能
+**官方文档**: [Create a Pool - Step-by-step](https://docs.centrifuge.io/developer/protocol/guides/create-a-pool/#step-by-step-creating-a-pool)
 
-**核心方法**:
+**职责**: 中央 Pool 管理合约,聚合并暴露所有核心 Pool 功能
+
+**核心方法 (基于官方文档)**:
 
 ```solidity
 /**
- * @dev 创建新池
- * @param poolId 池ID
- * @param metadata 池元数据(IPFS哈希)
+ * @dev 创建新 Pool
+ * @param poolId 全局唯一的 Pool ID
+ * @param manager Pool 管理者地址
+ * @param currency 计价货币 (如 newAssetId(840) 代表 USD)
  */
 function createPool(
-    uint256 poolId,
-    bytes32 metadata
-) external onlyHubAdmin {
-    // 1. 验证池ID唯一性
-    require(!hubRegistry.poolExists(poolId), "Pool already exists");
-
-    // 2. 注册池
-    hubRegistry.registerPool(poolId, metadata);
-
-    // 3. 初始化池配置
-    poolConfigs[poolId] = PoolConfig({
-        admin: msg.sender,
-        metadata: metadata,
-        status: PoolStatus.Active,
-        createdAt: block.timestamp
-    });
-
-    // 4. 触发事件
-    emit PoolCreated(poolId, msg.sender, metadata);
-}
+    PoolId poolId,
+    address manager,
+    AssetId currency
+) external;
 
 /**
- * @dev 设置BalanceSheet管理器
- * @param centrifugeId Centrifuge链上的ID
- * @param poolId 池ID
- * @param manager 管理器地址(bytes32格式)
- * @param addManager true=添加, false=移除
+ * @dev 设置 Pool 元数据
+ * @param poolId Pool ID
+ * @param metadata 元数据 (bytes 格式,可包含 IPFS 哈希或 JSON)
  */
-function updateBalanceSheetManager(
+function setPoolMetadata(
+    PoolId poolId,
+    bytes calldata metadata
+) external;
+
+/**
+ * @dev 通知其他网络 Pool 的存在
+ * @param poolId Pool ID
+ * @param centrifugeId 目标网络的 Centrifuge ID
+ */
+function notifyPool(
+    PoolId poolId,
+    bytes32 centrifugeId
+) external;
+
+/**
+ * @dev 添加 Share Class
+ * @param poolId Pool ID
+ * @param name ERC20 代币名称
+ * @param symbol ERC20 代币符号
+ * @param salt 用于确定性部署的盐值 (需全局唯一)
+ */
+function addShareClass(
+    PoolId poolId,
+    string calldata name,
+    string calldata symbol,
+    bytes32 salt
+) external;
+
+/**
+ * @dev 通知其他网络部署 Share Class
+ * @param poolId Pool ID
+ * @param scId Share Class ID
+ * @param centrifugeId 目标网络的 Centrifuge ID
+ * @param hook 权限钩子地址 (fullRestrictions/redemptionRestrictions/freezeOnly/address(0))
+ */
+function notifyShareClass(
+    PoolId poolId,
+    ShareClassId scId,
     bytes32 centrifugeId,
-    uint256 poolId,
-    bytes32 manager,
-    bool addManager
-) external onlyHubAdmin {
-    // 1. 验证池存在
-    require(hubRegistry.poolExists(poolId), "Pool does not exist");
+    bytes32 hook
+) external;
+```
 
-    // 2. 获取BalanceSheet合约
-    address balanceSheet = hubRegistry.getBalanceSheet(poolId);
+**权限钩子类型**:
 
-    // 3. 更新管理器
-    if (addManager) {
-        IBalanceSheet(balanceSheet).addManager(centrifugeId, manager);
-        emit ManagerAdded(poolId, manager);
-    } else {
-        IBalanceSheet(balanceSheet).removeManager(centrifugeId, manager);
-        emit ManagerRemoved(poolId, manager);
+-   `fullRestrictions`: 任何用户需要被添加到 memberlist 才能进行 deposit/redeem 请求
+-   `redemptionRestrictions`: 任何用户只需要被添加到 memberlist 才能进行 redeem 请求
+-   `freezeOnly`: 用户不需要被添加即可请求,但可以冻结用户
+-   `address(0)`: 代币完全无需许可
+
+---
+
+### 2.4 HubRegistry 合约详解 (官方接口)
+
+**职责**: 全局注册表,派生 Pool ID 并存储 Pool 注册信息
+
+**核心方法 (基于官方文档)**:
+
+```solidity
+/**
+ * @dev 派生网络特定的 Pool ID
+ * @param centrifugeId Hub 网络的 Centrifuge ID
+ * @param localId 本地标识符 (如 1, 2, 3...)
+ * @return poolId 全局唯一的 Pool ID
+ */
+function poolId(
+    bytes32 centrifugeId,
+    uint256 localId
+) external view returns (PoolId);
+```
+
+**使用示例**:
+
+```solidity
+// 派生 Pool ID
+PoolId poolId = hubRegistry.poolId(centrifugeId, 1);
+
+// centrifugeId: Hub 网络的 Centrifuge ID (查看所有可能的 ID: https://docs.centrifuge.io/developer/protocol/deployments/)
+// 1: 本地标识符
+```
+
+---
+
+### 2.5 ShareClassManager 合约详解 (官方接口)
+
+**职责**: Share Class 管理,预览和创建 Share Class ID
+
+**核心方法 (基于官方文档)**:
+
+```solidity
+/**
+ * @dev 预览下一个 Share Class ID
+ * @param poolId Pool ID
+ * @return scId 下一个 Share Class ID
+ */
+function previewNextShareClassId(
+    PoolId poolId
+) external view returns (ShareClassId scId);
+```
+
+**使用示例**:
+
+```solidity
+// 预览 Share Class ID
+ShareClassId scId = shareClassManager.previewNextShareClassId(poolId);
+```
+
+---
+
+### 2.6 代码示例 (基于官方文档)
+
+**官方文档**: [Create a Pool - Code Examples](https://docs.centrifuge.io/developer/protocol/guides/create-a-pool/)
+
+#### 2.6.1 完整的 Pool 创建和 Share Class 部署流程 (Solidity)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {Hub} from "./Hub.sol";
+import {HubRegistry} from "./HubRegistry.sol";
+import {ShareClassManager} from "./ShareClassManager.sol";
+import {PoolId, ShareClassId, AssetId} from "./Types.sol";
+
+/**
+ * @title Pool 创建完整流程
+ * @notice 基于 Centrifuge 官方文档的 Pool 创建示例
+ */
+contract PoolCreationExample {
+    Hub public hub;
+    HubRegistry public hubRegistry;
+    ShareClassManager public shareClassManager;
+
+    constructor(address _hub, address _hubRegistry, address _shareClassManager) {
+        hub = Hub(_hub);
+        hubRegistry = HubRegistry(_hubRegistry);
+        shareClassManager = ShareClassManager(_shareClassManager);
+    }
+
+    /**
+     * @dev 创建 Pool 并部署 Share Class 的完整流程
+     * @param centrifugeId Hub 网络的 Centrifuge ID
+     * @param localId 本地标识符 (如 1, 2, 3...)
+     * @param targetChainId 目标 Spoke 链的 Centrifuge ID
+     */
+    function createPoolAndShareClass(
+        bytes32 centrifugeId,
+        uint256 localId,
+        bytes32 targetChainId
+    ) external {
+        // ========== 步骤 1: 派生唯一 Pool ID ==========
+        PoolId poolId = hubRegistry.poolId(centrifugeId, localId);
+
+        // ========== 步骤 2: 创建 Pool ==========
+        // 使用 USD 作为计价货币 (ISO4217 代码 840)
+        AssetId currency = newAssetId(840);
+        hub.createPool(poolId, msg.sender, currency);
+
+        // ========== 步骤 3: 设置元数据 ==========
+        bytes memory metadata = bytes("Tokenized Real Estate Pool");
+        hub.setPoolMetadata(poolId, metadata);
+
+        // ========== 步骤 4: 通知 Pool 注册 ==========
+        // 向目标 Spoke 链发送 Pool 注册消息
+        hub.notifyPool(poolId, targetChainId);
+
+        // ========== 步骤 5: 添加 Share Class ==========
+        // 预览 Share Class ID
+        ShareClassId scId = shareClassManager.previewNextShareClassId(poolId);
+
+        // 添加 Share Class
+        string memory name = "Tokenized MMF";
+        string memory symbol = "MMF";
+        bytes32 salt = bytes32(bytes("1")); // 用于确定性部署的盐值
+        hub.addShareClass(poolId, name, symbol, salt);
+
+        // ========== 步骤 6: 部署 Share Token ==========
+        // 选择权限钩子类型
+        // fullRestrictions: 需要 memberlist 才能 deposit/redeem
+        // redemptionRestrictions: 只需要 memberlist 才能 redeem
+        // freezeOnly: 不需要 memberlist,但可以冻结用户
+        // address(0): 完全无需许可
+        address hook = address(0x1234); // 示例: fullRestrictions hook 地址
+
+        // 向目标 Spoke 链发送 Share Class 部署消息
+        hub.notifyShareClass(poolId, scId, targetChainId, bytes32(bytes20(hook)));
+    }
+
+    /**
+     * @dev 辅助函数: 创建 AssetId
+     * @param iso4217Code ISO4217 货币代码 (如 840 代表 USD)
+     */
+    function newAssetId(uint256 iso4217Code) internal pure returns (AssetId) {
+        // 实际实现取决于 Centrifuge 的 AssetId 类型定义
+        return AssetId.wrap(bytes32(iso4217Code));
     }
 }
 ```
 
 ---
 
-### 2.4 HubRegistry 合约详解
+### 2.7 关键注意事项 (基于官方文档)
 
-**职责**: 全局注册表,存储所有池、资产和货币的注册信息
-
-**数据结构**:
-
-```solidity
-// 池注册信息
-struct PoolInfo {
-    uint256 poolId;
-    address admin;
-    bytes32 metadata;
-    uint256 createdAt;
-    bool exists;
-}
-
-// 池ID映射
-mapping(uint256 => PoolInfo) public pools;
-
-// 份额类别映射
-mapping(uint256 => mapping(uint256 => ShareClassInfo)) public shareClasses;
-
-// BalanceSheet映射
-mapping(uint256 => address) public balanceSheets;
-
-// Vault映射
-mapping(uint256 => mapping(uint256 => address)) public vaults;
-```
-
-**核心方法**:
-
-```solidity
-/**
- * @dev 注册新池
- * @param poolId 池ID
- * @param metadata 池元数据
- */
-function registerPool(
-    uint256 poolId,
-    bytes32 metadata
-) external onlyHub {
-    require(!pools[poolId].exists, "Pool already registered");
-
-    pools[poolId] = PoolInfo({
-        poolId: poolId,
-        admin: tx.origin,
-        metadata: metadata,
-        createdAt: block.timestamp,
-        exists: true
-    });
-
-    emit PoolRegistered(poolId, metadata);
-}
-
-/**
- * @dev 获取池信息
- * @param poolId 池ID
- * @return PoolInfo 池信息
- */
-function getPoolInfo(uint256 poolId) external view returns (PoolInfo memory) {
-    require(pools[poolId].exists, "Pool does not exist");
-    return pools[poolId];
-}
-```
-
----
-
-### 2.5 ShareClassManager 合约详解
-
-**职责**: 份额类别管理,处理基于 Epoch 的工作流
-
-**数据结构**:
-
-```solidity
-struct ShareClass {
-    uint256 scId;
-    string name;
-    string symbol;
-    uint256 minInvestment;
-    uint256 maxInvestment;
-    ShareClassStatus status;
-    uint256 createdAt;
-}
-
-enum ShareClassStatus {
-    Active,
-    Paused,
-    Closed
-}
-
-// 份额类别映射
-mapping(uint256 => mapping(uint256 => ShareClass)) public shareClasses;
-
-// Epoch映射
-mapping(uint256 => mapping(uint256 => uint256)) public currentEpoch;
-```
-
-**核心方法**:
-
-```solidity
-/**
- * @dev 创建份额类别
- * @param poolId 池ID
- * @param scId 份额类别ID
- * @param config 份额类别配置
- */
-function createShareClass(
-    uint256 poolId,
-    uint256 scId,
-    ShareClassConfig memory config
-) external onlyHub {
-    // 1. 验证池存在
-    require(hubRegistry.poolExists(poolId), "Pool does not exist");
-
-    // 2. 验证份额类别ID唯一性
-    require(!scExists(poolId, scId), "Share class already exists");
-
-    // 3. 创建份额类别
-    shareClasses[poolId][scId] = ShareClass({
-        scId: scId,
-        name: config.name,
-        symbol: config.symbol,
-        minInvestment: config.minInvestment,
-        maxInvestment: config.maxInvestment,
-        status: ShareClassStatus.Active,
-        createdAt: block.timestamp
-    });
-
-    // 4. 初始化第一个Epoch
-    _startNewEpoch(poolId, scId);
-
-    // 5. 触发事件
-    emit ShareClassCreated(poolId, scId, config.name);
-}
-```
-
----
-
-### 2.6 代码示例
-
-#### 2.6.1 完整的池创建流程(TypeScript)
-
-```typescript
-import { ethers } from "ethers";
-
-interface ShareClassConfig {
-    name: string;
-    symbol: string;
-    minInvestment: bigint;
-    maxInvestment: bigint;
-    targetAPY: bigint;
-    restrictedTransfer: boolean;
-}
-
-async function createCentrifugePool(
-    hubContract: ethers.Contract,
-    poolId: bigint,
-    metadata: string,
-    shareClassConfig: ShareClassConfig
-) {
-    try {
-        // 1. 创建池
-        console.log("Creating pool...");
-        const tx1 = await hubContract.createPool(poolId, metadata);
-        await tx1.wait();
-        console.log(`✅ Pool ${poolId} created`);
-
-        // 2. 创建份额类别
-        console.log("Creating share class...");
-        const tx2 = await hubContract.createShareClass(
-            poolId,
-            1n, // scId
-            shareClassConfig
-        );
-        await tx2.wait();
-        console.log(`✅ Share class created for pool ${poolId}`);
-
-        // 3. 部署BalanceSheet
-        console.log("Deploying BalanceSheet...");
-        const tx3 = await hubContract.deployBalanceSheet(poolId);
-        const receipt3 = await tx3.wait();
-        const balanceSheetAddress = receipt3.events[0].args.balanceSheet;
-        console.log(`✅ BalanceSheet deployed at ${balanceSheetAddress}`);
-
-        // 4. 部署Vault
-        console.log("Deploying Vault...");
-        const tx4 = await hubContract.deployVault(poolId, 1n);
-        const receipt4 = await tx4.wait();
-        const vaultAddress = receipt4.events[0].args.vault;
-        console.log(`✅ Vault deployed at ${vaultAddress}`);
-
-        return {
-            poolId,
-            shareClassId: 1n,
-            balanceSheetAddress,
-            vaultAddress,
-            status: "created",
-        };
-    } catch (error) {
-        console.error("Error creating pool:", error);
-        throw error;
-    }
-}
-
-// 使用示例
-const config: ShareClassConfig = {
-    name: "Senior Tranche",
-    symbol: "SEN",
-    minInvestment: ethers.parseUnits("1000", 6), // 1000 USDC
-    maxInvestment: ethers.parseUnits("1000000", 6), // 1M USDC
-    targetAPY: 800n, // 8% (基点)
-    restrictedTransfer: true,
-};
-
-const result = await createCentrifugePool(
-    hubContract,
-    12345n,
-    "0x1234...", // IPFS hash
-    config
-);
-```
-
----
-
-### 2.7 注意事项
-
-1. **池 ID 唯一性**: 必须确保池 ID 在全局范围内唯一,通常由 Centrifuge 链生成
-2. **权限管理**: 只有 Hub 管理员可以创建池,需要严格的权限控制
-3. **元数据存储**: 池元数据通常存储在 IPFS 上,合约只存储 IPFS 哈希
-4. **Gas 优化**: 池创建涉及多个合约部署,Gas 成本较高,建议使用批量操作
-5. **事件监听**: 应监听 PoolCreated 事件以确认池创建成功
-6. **错误处理**: 需要处理各种可能的错误情况,如池 ID 重复、权限不足等
+1. **Pool 创建权限**: 目前 Pool 创建仍然是需要许可的,在协议初始推出期间。Pool 创建将在未来几个月内开放为无需许可
+2. **Pool ID 派生**: 必须使用 `hubRegistry.poolId()` 派生全局唯一的 Pool ID,不能自行指定
+3. **Hub 网络选择**: 选择哪个网络作为 Hub 网络,这将是创建 Pool、管理权限和控制所有其他网络的地方
+4. **跨链消息**: `notifyPool()` 和 `notifyShareClass()` 会发送跨链消息,需要等待消息传递完成
+5. **权限钩子选择**: 根据业务需求选择合适的权限钩子类型 (fullRestrictions/redemptionRestrictions/freezeOnly/无需许可)
+6. **元数据格式**: 元数据可以是任意 bytes 格式,通常包含 IPFS 哈希或 JSON 数据
+7. **Centrifuge ID**: 查看所有可能的 Centrifuge ID: https://docs.centrifuge.io/developer/protocol/deployments/
 
 ---
 
