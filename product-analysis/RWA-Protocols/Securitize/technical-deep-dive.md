@@ -128,19 +128,27 @@ graph TB
 
 ## 2. 业务流程 1: 证券代币发行
 
+**验证状态**: ✅ 官方验证 (基于 GitHub 官方接口)
+**官方文档**: [DSTokenInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/token/DSTokenInterface.sol)
+
 ### 2.1 流程概述
 
 证券代币发行是 Securitize 业务流程的起点,由资产发行者(Issuer)发起,通过 DS Protocol 部署一个新的数字证券代币。
 
-**涉及的合约**: DSTokenFactory, DSToken, DSRegistry, DSCompliance
+**涉及的核心接口** (基于官方 GitHub):
+
+-   **DSTokenInterface**: 数字证券代币接口 (ERC-20 扩展)
+-   **DSServiceConsumerInterface**: 服务消费者基础接口
+-   **DSTrustServiceInterface**: 信任服务接口 (角色管理)
 
 **核心步骤**:
 
 1. 发行者提交发行申请(包含资产信息、发行规模、合规要求)
 2. Securitize 审核发行申请
-3. 部署 DSToken 合约
-4. 配置合规规则(Reg D/S/A+)
-5. 开启认购
+3. 部署 DSToken 合约 (继承 DSTokenInterface)
+4. 配置服务关联 (Registry, Compliance, Trust)
+5. 设置发行上限 (setCap)
+6. 开启认购
 
 ---
 
@@ -150,69 +158,176 @@ graph TB
 sequenceDiagram
     participant Issuer as 资产发行者
     participant Platform as Securitize平台
-    participant Factory as DSTokenFactory合约
     participant Token as DSToken合约
-    participant Registry as DSRegistry合约
-    participant Compliance as DSCompliance合约
+    participant Service as DSServiceConsumer
+    participant Trust as DSTrustService
+    participant Registry as DSRegistryService
+    participant Compliance as DSComplianceService
 
     Issuer->>Platform: 1. 提交发行申请
     Platform->>Platform: 2. 审核申请
-    Platform->>Factory: 3. deployToken(params)
-    Factory->>Token: 4. 部署DSToken合约
-    Token-->>Factory: 5. 返回Token地址
-    Factory->>Registry: 6. 部署DSRegistry合约
-    Registry-->>Factory: 7. 返回Registry地址
-    Factory->>Compliance: 8. 部署DSCompliance合约
-    Compliance-->>Factory: 9. 返回Compliance地址
-    Factory->>Token: 10. 配置合约关联
-    Factory-->>Platform: 11. 返回部署成功
-    Platform-->>Issuer: 12. 发行成功通知
+    Platform->>Token: 3. 部署DSToken合约
+    Token-->>Platform: 4. 返回Token地址
+    Platform->>Service: 5. setDSService(TRUST_SERVICE, trustAddr)
+    Platform->>Service: 6. setDSService(REGISTRY_SERVICE, registryAddr)
+    Platform->>Service: 7. setDSService(COMPLIANCE_SERVICE, complianceAddr)
+    Platform->>Token: 8. setCap(totalSupply)
+    Platform->>Trust: 9. assignRole(issuer, ISSUER_ROLE)
+    Platform-->>Issuer: 10. 发行成功通知
 ```
 
 ---
 
-### 2.3 DSTokenFactory 合约详解
+### 2.3 DSTokenInterface 合约详解
 
-**职责**: 数字证券代币工厂合约,用于部署 DS Protocol 代币
+**官方接口**: [DSTokenInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/token/DSTokenInterface.sol)
+
+**职责**: 数字证券代币接口,继承 ERC-20,扩展了数字证券特有功能
+
+**核心特性**:
+
+-   **投资者中心化余额**: 通过投资者 ID 查询余额
+-   **钱包迭代能力**: 可以遍历所有持有者钱包
+-   **代币锁定机制**: 支持时间锁定和自定义锁定
+-   **代币发行与销毁**: issueTokens, burn, seize
 
 **核心方法**:
 
 ```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.4.23;
+
+import "../../zeppelin/token/ERC20/ERC20.sol";
+import "../util/VersionedContract.sol";
+
 /**
- * @dev 部署数字证券代币
- * @param name 证券名称
- * @param symbol 证券符号
- * @param totalSupply 总供应量
- * @param regType 监管类型(RegD/RegS/RegA)
+ * @title DSTokenInterface
+ * @dev 数字证券代币接口 (基于官方GitHub)
+ * @notice 继承ERC-20,扩展了数字证券特有功能
  */
-function deployToken(
-    string memory name,
-    string memory symbol,
-    uint256 totalSupply,
-    RegulationType regType
-) external onlyAdmin returns (address tokenAddress) {
-    // 1. 部署DSToken合约
-    DSToken token = new DSToken(name, symbol, totalSupply);
+contract DSTokenInterface is ERC20, VersionedContract {
 
-    // 2. 部署DSRegistry合约
-    DSRegistry registry = new DSRegistry();
+    // ============ 配置管理 ============
 
-    // 3. 部署DSCompliance合约
-    DSCompliance compliance = new DSCompliance(regType);
+    /**
+     * @dev 设置代币发行上限
+     * @param _cap 发行上限
+     * @notice 只能调用一次,之后无法修改
+     */
+    function setCap(uint256 _cap) public /*onlyMaster*/;
 
-    // 4. 配置合约关联
-    token.setRegistry(address(registry));
-    token.setCompliance(address(compliance));
+    // ============ 代币发行 (Minting) ============
 
-    // 5. 转移所有权给发行者
-    token.transferOwnership(msg.sender);
-    registry.transferOwnership(msg.sender);
-    compliance.transferOwnership(msg.sender);
+    /**
+     * @dev 发行解锁代币
+     * @param _to 接收地址
+     * @param _value 发行数量
+     * @return 是否成功
+     */
+    function issueTokens(address _to, uint256 _value)
+        /*onlyIssuerOrAbove*/
+        public
+        returns (bool);
 
-    // 6. 触发事件
-    emit TokenDeployed(address(token), msg.sender, regType);
+    /**
+     * @dev 发行自定义代币 (支持锁定)
+     * @param _to 接收地址
+     * @param _value 发行数量
+     * @param _issuanceTime 发行时间
+     * @param _valueLocked 锁定数量
+     * @param _reason 锁定原因
+     * @param _releaseTime 解锁时间 (0表示需手动解锁)
+     * @return 是否成功
+     */
+    function issueTokensCustom(
+        address _to,
+        uint256 _value,
+        uint256 _issuanceTime,
+        uint256 _valueLocked,
+        string _reason,
+        uint64 _releaseTime
+    ) /*onlyIssuerOrAbove*/ public returns (bool);
 
-    return address(token);
+    /**
+     * @dev 查询已发行总量
+     * @return 已发行总量
+     */
+    function totalIssued() public view returns (uint);
+
+    // ============ 代币销毁 (Burning) ============
+
+    /**
+     * @dev 销毁代币
+     * @param _who 销毁地址
+     * @param _value 销毁数量
+     * @param _reason 销毁原因
+     */
+    function burn(address _who, uint256 _value, string _reason)
+        /*onlyIssuerOrAbove*/
+        public;
+
+    // ============ 代币没收 (Seizing) ============
+
+    /**
+     * @dev 没收代币 (强制转移)
+     * @param _from 源地址
+     * @param _to 目标地址
+     * @param _value 没收数量
+     * @param _reason 没收原因
+     */
+    function seize(address _from, address _to, uint256 _value, string _reason)
+        /*onlyIssuerOrAbove*/
+        public;
+
+    // ============ 钱包迭代 ============
+
+    /**
+     * @dev 获取指定索引的钱包地址
+     * @param _index 索引
+     * @return 钱包地址
+     */
+    function getWalletAt(uint256 _index) public view returns (address);
+
+    /**
+     * @dev 获取钱包总数
+     * @return 钱包总数
+     */
+    function walletCount() public view returns (uint256);
+
+    // ============ 其他功能 ============
+
+    /**
+     * @dev 检查是否暂停
+     * @return 是否暂停
+     */
+    function isPaused() view public returns (bool);
+
+    /**
+     * @dev 通过投资者ID查询余额
+     * @param _id 投资者ID
+     * @return 余额
+     */
+    function balanceOfInvestor(string _id) view public returns (uint256);
+
+    /**
+     * @dev 转账前检查
+     * @param _from 源地址
+     * @param _to 目标地址
+     * @param _value 转账数量
+     * @return code 状态码, reason 原因
+     */
+    function preTransferCheck(address _from, address _to, uint _value)
+        view
+        public
+        returns (uint code, string reason);
+
+    // ============ 事件 ============
+
+    event Issue(address indexed to, uint256 value, uint256 valueLocked);
+    event Burn(address indexed burner, uint256 value, string reason);
+    event Seize(address indexed from, address indexed to, uint256 value, string reason);
+    event WalletAdded(address wallet);
+    event WalletRemoved(address wallet);
 }
 ```
 
@@ -220,137 +335,241 @@ function deployToken(
 
 ### 2.4 代码示例
 
-#### 2.4.1 发行数字证券(TypeScript)
+#### 2.4.1 发行数字证券 (Solidity)
 
-```typescript
-import { ethers } from "ethers";
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.4.23;
+
+import "./DSTokenInterface.sol";
+import "./DSServiceConsumerInterface.sol";
+import "./DSTrustServiceInterface.sol";
 
 /**
- * 发行数字证券完整流程
- * @param factoryContract DSTokenFactory合约实例
- * @param securityConfig 证券配置参数
- * @returns 部署结果
+ * @title DSTokenDeployment
+ * @dev 数字证券代币发行完整流程示例
+ * @notice 基于官方GitHub接口实现
  */
-async function issueDigitalSecurity(
-    factoryContract: ethers.Contract,
-    securityConfig: {
-        name: string;
-        symbol: string;
-        totalSupply: bigint;
-        regType: "RegD" | "RegS" | "RegA";
-        lockupPeriod: number; // 锁定期(天)
-        minInvestment: bigint; // 最小投资额
-        maxInvestors: number; // 最大投资者数量
+contract DSTokenDeployment {
+
+    // ============ 状态变量 ============
+
+    address public owner;
+    address public dsToken;
+    address public trustService;
+    address public registryService;
+    address public complianceService;
+
+    // ============ 事件 ============
+
+    event TokenDeployed(
+        address indexed tokenAddress,
+        address indexed issuer,
+        uint256 totalSupply
+    );
+
+    event ServiceConfigured(
+        uint serviceId,
+        address serviceAddress
+    );
+
+    // ============ 修饰符 ============
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this");
+        _;
     }
-) {
-    try {
-        console.log("🚀 开始发行数字证券...");
-        console.log("证券名称:", securityConfig.name);
-        console.log("证券符号:", securityConfig.symbol);
-        console.log("总供应量:", securityConfig.totalSupply.toString());
-        console.log("监管类型:", securityConfig.regType);
 
-        // 1. 部署数字证券合约
-        console.log("\n步骤1: 部署DSToken合约...");
-        const tx = await factoryContract.deployToken(
-            securityConfig.name,
-            securityConfig.symbol,
-            securityConfig.totalSupply,
-            securityConfig.regType
-        );
+    // ============ 构造函数 ============
 
-        console.log("交易哈希:", tx.hash);
-        const receipt = await tx.wait();
-        console.log("✅ 合约部署成功!");
-
-        // 2. 获取部署的合约地址
-        const event = receipt.events.find((e) => e.event === "TokenDeployed");
-        if (!event) {
-            throw new Error("TokenDeployed事件未找到");
-        }
-
-        const tokenAddress = event.args.tokenAddress;
-        const registryAddress = event.args.registryAddress;
-        const complianceAddress = event.args.complianceAddress;
-
-        console.log("\n📋 部署的合约地址:");
-        console.log("DSToken:", tokenAddress);
-        console.log("DSRegistry:", registryAddress);
-        console.log("DSCompliance:", complianceAddress);
-
-        // 3. 配置锁定期
-        console.log("\n步骤2: 配置锁定期...");
-        const tokenContract = new ethers.Contract(tokenAddress, DSTokenABI, signer);
-        const lockupSeconds = securityConfig.lockupPeriod * 86400;
-        const tx2 = await tokenContract.setLockupPeriod(lockupSeconds);
-        await tx2.wait();
-        console.log("✅ 锁定期设置为", securityConfig.lockupPeriod, "天");
-
-        // 4. 配置投资限制
-        console.log("\n步骤3: 配置投资限制...");
-        const complianceContract = new ethers.Contract(complianceAddress, DSComplianceABI, signer);
-        const tx3 = await complianceContract.setInvestmentLimits(
-            securityConfig.minInvestment,
-            securityConfig.maxInvestors
-        );
-        await tx3.wait();
-        console.log(
-            "✅ 最小投资额:",
-            ethers.utils.formatEther(securityConfig.minInvestment),
-            "ETH"
-        );
-        console.log("✅ 最大投资者数量:", securityConfig.maxInvestors);
-
-        // 5. 验证部署
-        console.log("\n步骤4: 验证部署...");
-        const name = await tokenContract.name();
-        const symbol = await tokenContract.symbol();
-        const totalSupply = await tokenContract.totalSupply();
-        const lockupPeriod = await tokenContract.lockupPeriod();
-
-        console.log("\n📊 验证结果:");
-        console.log("名称:", name);
-        console.log("符号:", symbol);
-        console.log("总供应量:", totalSupply.toString());
-        console.log("锁定期:", lockupPeriod.toNumber() / 86400, "天");
-
-        return {
-            tokenAddress,
-            registryAddress,
-            complianceAddress,
-            name: securityConfig.name,
-            symbol: securityConfig.symbol,
-            totalSupply: securityConfig.totalSupply,
-            regType: securityConfig.regType,
-            status: "deployed",
-            deploymentTime: new Date().toISOString(),
-        };
-    } catch (error) {
-        console.error("❌ 发行数字证券失败:", error);
-        throw error;
+    constructor() public {
+        owner = msg.sender;
     }
-}
 
-// 使用示例
-async function main() {
-    const provider = new ethers.providers.JsonRpcProvider("https://mainnet.infura.io/v3/YOUR_KEY");
-    const wallet = new ethers.Wallet("YOUR_PRIVATE_KEY", provider);
-    const factoryContract = new ethers.Contract(FACTORY_ADDRESS, DSTokenFactoryABI, wallet);
+    // ============ 核心功能 ============
 
-    const result = await issueDigitalSecurity(factoryContract, {
-        name: "Real Estate Token A",
-        symbol: "RETA",
-        totalSupply: ethers.utils.parseEther("1000000"), // 100万代币
-        regType: "RegD",
-        lockupPeriod: 365, // 1年锁定期
-        minInvestment: ethers.utils.parseEther("10000"), // 最小投资1万美元
-        maxInvestors: 99, // 最多99个投资者
-    });
+    /**
+     * @dev 步骤1: 部署DSToken合约
+     * @param _tokenAddress 预部署的DSToken合约地址
+     * @param _cap 发行上限
+     * @return 是否成功
+     */
+    function deployToken(
+        address _tokenAddress,
+        uint256 _cap
+    ) public onlyOwner returns (bool) {
+        require(_tokenAddress != address(0), "Invalid token address");
+        require(_cap > 0, "Cap must be greater than 0");
 
-    console.log("\n🎉 数字证券发行完成!");
-    console.log("代币地址:", result.tokenAddress);
+        // 1. 保存Token地址
+        dsToken = _tokenAddress;
+        DSTokenInterface token = DSTokenInterface(_tokenAddress);
+
+        // 2. 设置发行上限
+        token.setCap(_cap);
+
+        // 3. 触发事件
+        emit TokenDeployed(_tokenAddress, msg.sender, _cap);
+
+        return true;
+    }
+
+    /**
+     * @dev 步骤2: 配置服务关联
+     * @param _trustService 信任服务地址
+     * @param _registryService 注册服务地址
+     * @param _complianceService 合规服务地址
+     * @return 是否成功
+     */
+    function configureServices(
+        address _trustService,
+        address _registryService,
+        address _complianceService
+    ) public onlyOwner returns (bool) {
+        require(dsToken != address(0), "Token not deployed");
+        require(_trustService != address(0), "Invalid trust service");
+        require(_registryService != address(0), "Invalid registry service");
+        require(_complianceService != address(0), "Invalid compliance service");
+
+        // 1. 保存服务地址
+        trustService = _trustService;
+        registryService = _registryService;
+        complianceService = _complianceService;
+
+        // 2. 配置服务关联
+        DSServiceConsumerInterface serviceConsumer = DSServiceConsumerInterface(dsToken);
+
+        // TRUST_SERVICE = 1
+        serviceConsumer.setDSService(1, _trustService);
+        emit ServiceConfigured(1, _trustService);
+
+        // REGISTRY_SERVICE = 4
+        serviceConsumer.setDSService(4, _registryService);
+        emit ServiceConfigured(4, _registryService);
+
+        // COMPLIANCE_SERVICE = 8
+        serviceConsumer.setDSService(8, _complianceService);
+        emit ServiceConfigured(8, _complianceService);
+
+        return true;
+    }
+
+    /**
+     * @dev 步骤3: 发行初始代币
+     * @param _to 接收地址
+     * @param _value 发行数量
+     * @return 是否成功
+     */
+    function issueInitialTokens(
+        address _to,
+        uint256 _value
+    ) public onlyOwner returns (bool) {
+        require(dsToken != address(0), "Token not deployed");
+        require(_to != address(0), "Invalid recipient");
+        require(_value > 0, "Value must be greater than 0");
+
+        // 调用DSToken的issueTokens方法
+        DSTokenInterface token = DSTokenInterface(dsToken);
+        bool success = token.issueTokens(_to, _value);
+
+        require(success, "Token issuance failed");
+
+        return true;
+    }
+
+    /**
+     * @dev 步骤4: 发行带锁定的代币
+     * @param _to 接收地址
+     * @param _value 发行数量
+     * @param _valueLocked 锁定数量
+     * @param _reason 锁定原因
+     * @param _releaseTime 解锁时间
+     * @return 是否成功
+     */
+    function issueLockedTokens(
+        address _to,
+        uint256 _value,
+        uint256 _valueLocked,
+        string _reason,
+        uint64 _releaseTime
+    ) public onlyOwner returns (bool) {
+        require(dsToken != address(0), "Token not deployed");
+        require(_to != address(0), "Invalid recipient");
+        require(_value > 0, "Value must be greater than 0");
+        require(_valueLocked <= _value, "Locked value exceeds total value");
+
+        // 调用DSToken的issueTokensCustom方法
+        DSTokenInterface token = DSTokenInterface(dsToken);
+        bool success = token.issueTokensCustom(
+            _to,
+            _value,
+            now, // 当前时间作为发行时间
+            _valueLocked,
+            _reason,
+            _releaseTime
+        );
+
+        require(success, "Locked token issuance failed");
+
+        return true;
+    }
+
+    // ============ 查询功能 ============
+
+    /**
+     * @dev 查询已发行总量
+     * @return 已发行总量
+     */
+    function getTotalIssued() public view returns (uint) {
+        require(dsToken != address(0), "Token not deployed");
+        DSTokenInterface token = DSTokenInterface(dsToken);
+        return token.totalIssued();
+    }
+
+    /**
+     * @dev 查询钱包总数
+     * @return 钱包总数
+     */
+    function getWalletCount() public view returns (uint256) {
+        require(dsToken != address(0), "Token not deployed");
+        DSTokenInterface token = DSTokenInterface(dsToken);
+        return token.walletCount();
+    }
+
+    /**
+     * @dev 查询指定索引的钱包地址
+     * @param _index 索引
+     * @return 钱包地址
+     */
+    function getWalletAt(uint256 _index) public view returns (address) {
+        require(dsToken != address(0), "Token not deployed");
+        DSTokenInterface token = DSTokenInterface(dsToken);
+        return token.getWalletAt(_index);
+    }
 }
 ```
+
+---
+
+### 2.5 注意事项
+
+**发行前准备**:
+
+1. ✅ 确保已部署所有必需的服务合约 (Trust, Registry, Compliance)
+2. ✅ 确保发行者拥有足够的权限 (通过 DSTrustService 分配)
+3. ✅ 确保发行上限设置合理 (setCap 只能调用一次)
+
+**合规要求**:
+
+1. ✅ 必须通过 DSComplianceService 验证
+2. ✅ 必须符合 SEC 监管要求 (Reg D/S/A+)
+3. ✅ 必须在 DSRegistry 中注册投资者信息
+
+**安全建议**:
+
+1. ✅ 使用多签钱包管理发行者权限
+2. ✅ 设置合理的代币锁定期
+3. ✅ 定期审计合约代码
 
 ---
 
