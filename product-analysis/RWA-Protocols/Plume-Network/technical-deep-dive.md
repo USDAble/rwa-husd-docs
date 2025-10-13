@@ -1,10 +1,10 @@
 # Plume Network 业务流程与技术实现深度解析
 
-**文档版本**: v2.0  
-**创建时间**: 2025-10-13 12:20:00 CST  
-**文档类型**: 业务流程导向的技术深度解析  
-**定位**: RWA 专用 Layer 2 区块链  
-**信息来源**: Plume Network 官方文档 (https://plumenetwork.xyz/)
+**文档版本**: v2.0
+**创建时间**: 2025-10-13 12:20:00 CST
+**文档类型**: 业务流程导向的技术深度解析
+**定位**: RWA 专用 Layer 2 区块链
+**信息来源**: Plume Network 官方文档 (https://docs.plume.org/)
 
 ---
 
@@ -370,9 +370,9 @@ function execute(
 ### 10.1 Plume Testnet
 
 -   **Chain ID**: 161221135
--   **RPC**: https://testnet-rpc.plumenetwork.xyz
--   **Explorer**: https://testnet-explorer.plumenetwork.xyz
--   **Faucet**: https://faucet.plumenetwork.xyz
+-   **RPC**: https://testnet-rpc.plume.org
+-   **Explorer**: https://testnet-explorer.plume.org
+-   **Faucet**: https://faucet.plume.org
 
 ### 10.2 Plume Mainnet (即将上线)
 

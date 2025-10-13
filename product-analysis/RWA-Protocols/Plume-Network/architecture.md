@@ -3,7 +3,7 @@
 **文档版本**: v1.0  
 **创建时间**: 2025-10-09 09:33:30 CST  
 **文档类型**: 技术架构分析  
-**定位**: 首个模块化RWAfi区块链
+**定位**: 首个模块化 RWAfi 区块链
 
 ---
 
@@ -28,32 +28,32 @@ graph TB
         Passport[Plume Passport<br/>身份系统]
         Dashboard[Dashboard<br/>管理界面]
     end
-    
+
     subgraph "Protocol Layer 协议层"
         Nest[Nest Protocol<br/>收益协议]
         DEX[DEX Protocol<br/>交易协议]
         Lending[Lending Protocol<br/>借贷协议]
         Staking[Staking Protocol<br/>质押协议]
     end
-    
+
     subgraph "Blockchain Layer 区块链层"
         Consensus[Consensus Engine<br/>共识引擎]
         EVM[EVM Compatible<br/>EVM兼容层]
         Storage[State Storage<br/>状态存储]
         Compliance[Compliance Module<br/>合规模块]
     end
-    
+
     subgraph "Cross-Chain Layer 跨链层"
         Skylink[Skylink Bridge<br/>跨链桥]
         Relayer[Relayer Network<br/>中继网络]
     end
-    
+
     subgraph "External Systems 外部系统"
         KYC[KYC Providers<br/>KYC服务商]
         Oracle[Price Oracles<br/>价格预言机]
         Custody[Custody Services<br/>托管服务]
     end
-    
+
     Arc --> Nest
     Arc --> DEX
     Passport --> Compliance
@@ -69,7 +69,7 @@ graph TB
     KYC --> Passport
     Oracle --> Nest
     Custody --> Arc
-    
+
     style Arc fill:#4CAF50
     style Nest fill:#2196F3
     style EVM fill:#FF9800
@@ -78,39 +78,43 @@ graph TB
 
 ### 1.2 核心组件说明
 
-| 组件 | 职责 | 关键功能 |
-|------|------|----------|
-| **Arc Engine** | 端到端代币化引擎 | 资产验证、代币生成、自动部署 |
-| **Plume Passport** | 去中心化身份系统 | KYC/AML、合规验证、权限管理 |
-| **Nest Protocol** | 原生收益协议 | 自动收益分配、流动性挖矿 |
-| **Skylink Bridge** | 跨链桥接协议 | 跨链资产转移、流动性聚合 |
-| **Compliance Module** | 链级合规模块 | 转账限制、地域限制、投资者分类 |
+| 组件                  | 职责             | 关键功能                       |
+| --------------------- | ---------------- | ------------------------------ |
+| **Arc Engine**        | 端到端代币化引擎 | 资产验证、代币生成、自动部署   |
+| **Plume Passport**    | 去中心化身份系统 | KYC/AML、合规验证、权限管理    |
+| **Nest Protocol**     | 原生收益协议     | 自动收益分配、流动性挖矿       |
+| **Skylink Bridge**    | 跨链桥接协议     | 跨链资产转移、流动性聚合       |
+| **Compliance Module** | 链级合规模块     | 转账限制、地域限制、投资者分类 |
 
 ### 1.3 技术栈
 
 **区块链层**：
-- Cosmos SDK（模块化区块链框架）
-- Tendermint Core（BFT共识）
-- EVM兼容层（Ethermint）
-- CosmWasm（智能合约）
+
+-   Cosmos SDK（模块化区块链框架）
+-   Tendermint Core（BFT 共识）
+-   EVM 兼容层（Ethermint）
+-   CosmWasm（智能合约）
 
 **应用层**：
-- React 18.x + TypeScript
-- Next.js 14.x
-- Ethers.js 6.x
-- TailwindCSS
+
+-   React 18.x + TypeScript
+-   Next.js 14.x
+-   Ethers.js 6.x
+-   TailwindCSS
 
 **后端层**：
-- Go 1.21+（区块链节点）
-- Node.js 20.x（API服务）
-- PostgreSQL（数据索引）
-- Redis（缓存层）
+
+-   Go 1.21+（区块链节点）
+-   Node.js 20.x（API 服务）
+-   PostgreSQL（数据索引）
+-   Redis（缓存层）
 
 **基础设施**：
-- Kubernetes（容器编排）
-- Prometheus（监控）
-- Grafana（可视化）
-- IPFS（文档存储）
+
+-   Kubernetes（容器编排）
+-   Prometheus（监控）
+-   Grafana（可视化）
+-   IPFS（文档存储）
 
 ---
 
@@ -119,6 +123,7 @@ graph TB
 ### 2.1 Arc Engine（代币化引擎）
 
 **功能架构**：
+
 ```mermaid
 graph LR
     subgraph "Arc Engine"
@@ -128,12 +133,12 @@ graph LR
         Deploy[Auto Deployment<br/>自动部署]
         Manage[Asset Management<br/>资产管理]
     end
-    
+
     Upload --> Verify
     Verify --> Generate
     Generate --> Deploy
     Deploy --> Manage
-    
+
     style Upload fill:#4CAF50
     style Verify fill:#2196F3
     style Generate fill:#FF9800
@@ -142,22 +147,24 @@ graph LR
 ```
 
 **关键特性**：
-- ✅ **5分钟部署**：从上传文档到代币发行
-- ✅ **零代码**：无需编写智能合约
-- ✅ **自动化**：资产验证、合规检查、代币生成全自动
-- ✅ **模板化**：支持多种资产类型（房产、黄金、私募信贷等）
+
+-   ✅ **5 分钟部署**：从上传文档到代币发行
+-   ✅ **零代码**：无需编写智能合约
+-   ✅ **自动化**：资产验证、合规检查、代币生成全自动
+-   ✅ **模板化**：支持多种资产类型（房产、黄金、私募信贷等）
 
 **支持的资产类型**：
 
-| 资产类型 | 验证要求 | 代币标准 | 合规要求 |
-|---------|---------|---------|---------|
-| **房地产** | 产权证明、评估报告 | ERC20 + 合规模块 | SEC Reg D |
-| **黄金** | 托管证明、纯度证明 | ERC20 + 实物锚定 | LBMA标准 |
-| **私募信贷** | 贷款协议、信用评级 | ERC20 + 收益分配 | SEC Reg D |
-| **艺术品** | 鉴定证书、保险证明 | ERC721 + 分数化 | 无特殊要求 |
-| **碳信用** | 认证证书、项目文档 | ERC20 + 销毁机制 | VCS/Gold Standard |
+| 资产类型     | 验证要求           | 代币标准         | 合规要求          |
+| ------------ | ------------------ | ---------------- | ----------------- |
+| **房地产**   | 产权证明、评估报告 | ERC20 + 合规模块 | SEC Reg D         |
+| **黄金**     | 托管证明、纯度证明 | ERC20 + 实物锚定 | LBMA 标准         |
+| **私募信贷** | 贷款协议、信用评级 | ERC20 + 收益分配 | SEC Reg D         |
+| **艺术品**   | 鉴定证书、保险证明 | ERC721 + 分数化  | 无特殊要求        |
+| **碳信用**   | 认证证书、项目文档 | ERC20 + 销毁机制 | VCS/Gold Standard |
 
-**Arc Engine工作流程**：
+**Arc Engine 工作流程**：
+
 ```solidity
 // Arc Engine核心接口（伪代码）
 interface IArcEngine {
@@ -168,19 +175,19 @@ interface IArcEngine {
         uint256 totalValue,
         bytes memory documents
     ) external returns (uint256 projectId);
-    
+
     // 2. 验证资产
     function verifyAsset(
         uint256 projectId,
         bytes memory verificationProof
     ) external returns (bool);
-    
+
     // 3. 生成代币
     function generateToken(
         uint256 projectId,
         TokenConfig memory config
     ) external returns (address tokenAddress);
-    
+
     // 4. 部署代币
     function deployToken(
         uint256 projectId
@@ -201,6 +208,7 @@ struct TokenConfig {
 ### 2.2 Plume Passport（身份系统）
 
 **身份架构**：
+
 ```mermaid
 graph TB
     subgraph "Plume Passport"
@@ -209,58 +217,63 @@ graph TB
         Credentials[Verifiable Credentials<br/>可验证凭证]
         Permissions[Permission Management<br/>权限管理]
     end
-    
+
     subgraph "Verification Providers"
         Onfido[Onfido]
         Jumio[Jumio]
         Sumsub[Sumsub]
     end
-    
+
     subgraph "Compliance Checks"
         AML[AML Screening<br/>反洗钱筛查]
         Sanctions[Sanctions Check<br/>制裁检查]
         PEP[PEP Check<br/>政治公众人物检查]
     end
-    
+
     DID --> KYC
     KYC --> Credentials
     Credentials --> Permissions
-    
+
     KYC --> Onfido
     KYC --> Jumio
     KYC --> Sumsub
-    
+
     KYC --> AML
     KYC --> Sanctions
     KYC --> PEP
-    
+
     style DID fill:#4CAF50
     style KYC fill:#2196F3
     style Credentials fill:#FF9800
 ```
 
 **身份验证流程**：
-1. **用户注册**
-   - 创建去中心化身份（DID）
-   - 生成密钥对
-   - 绑定钱包地址
 
-2. **KYC验证**
-   - 上传身份文档
-   - 人脸识别验证
-   - 地址证明验证
+1. **用户注册**
+
+    - 创建去中心化身份（DID）
+    - 生成密钥对
+    - 绑定钱包地址
+
+2. **KYC 验证**
+
+    - 上传身份文档
+    - 人脸识别验证
+    - 地址证明验证
 
 3. **合规检查**
-   - AML筛查
-   - 制裁名单检查
-   - PEP检查
+
+    - AML 筛查
+    - 制裁名单检查
+    - PEP 检查
 
 4. **凭证发行**
-   - 生成可验证凭证（VC）
-   - 链上存储凭证哈希
-   - 链下存储凭证详情
+    - 生成可验证凭证（VC）
+    - 链上存储凭证哈希
+    - 链下存储凭证详情
 
-**Passport数据结构**：
+**Passport 数据结构**：
+
 ```solidity
 // Plume Passport核心结构
 struct PassportData {
@@ -288,6 +301,7 @@ struct VerifiableCredential {
 ### 2.3 Nest Protocol（收益协议）
 
 **收益机制架构**：
+
 ```mermaid
 graph TB
     subgraph "Nest Protocol"
@@ -296,31 +310,31 @@ graph TB
         Distribution[Auto Distribution<br/>自动分配]
         Compound[Auto Compound<br/>自动复投]
     end
-    
+
     subgraph "Yield Sources"
         RWA[RWA Native Yield<br/>RWA原生收益]
         DeFi[DeFi Yield<br/>DeFi收益]
         Staking[Staking Rewards<br/>质押奖励]
     end
-    
+
     subgraph "Distribution Methods"
         Direct[Direct Payment<br/>直接支付]
         Reinvest[Reinvestment<br/>再投资]
         Claim[Manual Claim<br/>手动领取]
     end
-    
+
     Deposit --> Yield
     Yield --> Distribution
     Distribution --> Compound
-    
+
     RWA --> Yield
     DeFi --> Yield
     Staking --> Yield
-    
+
     Distribution --> Direct
     Distribution --> Reinvest
     Distribution --> Claim
-    
+
     style Nest fill:#4CAF50
     style Yield fill:#2196F3
     style Distribution fill:#FF9800
@@ -328,14 +342,15 @@ graph TB
 
 **收益类型**：
 
-| 收益来源 | 年化收益率 | 分配频率 | 风险等级 |
-|---------|-----------|---------|---------|
-| **房地产租金** | 5-8% | 月度 | 低 |
-| **私募信贷利息** | 8-12% | 季度 | 中 |
-| **DeFi流动性挖矿** | 10-20% | 实时 | 中高 |
-| **质押奖励** | 5-10% | 每区块 | 低 |
+| 收益来源            | 年化收益率 | 分配频率 | 风险等级 |
+| ------------------- | ---------- | -------- | -------- |
+| **房地产租金**      | 5-8%       | 月度     | 低       |
+| **私募信贷利息**    | 8-12%      | 季度     | 中       |
+| **DeFi 流动性挖矿** | 10-20%     | 实时     | 中高     |
+| **质押奖励**        | 5-10%      | 每区块   | 低       |
 
-**Nest Protocol核心功能**：
+**Nest Protocol 核心功能**：
+
 ```solidity
 // Nest Protocol接口
 interface INestProtocol {
@@ -344,23 +359,23 @@ interface INestProtocol {
         address rwaToken,
         uint256 amount
     ) external returns (uint256 shares);
-    
+
     // 提取RWA代币
     function withdraw(
         address rwaToken,
         uint256 shares
     ) external returns (uint256 amount);
-    
+
     // 领取收益
     function claimYield(
         address rwaToken
     ) external returns (uint256 yieldAmount);
-    
+
     // 自动复投
     function autoCompound(
         address rwaToken
     ) external returns (bool);
-    
+
     // 查询收益
     function getYield(
         address user,
@@ -384,25 +399,26 @@ struct YieldPool {
 ### 2.4 Skylink Bridge（跨链桥）
 
 **跨链架构**：
+
 ```mermaid
 graph LR
     subgraph "Source Chain"
         Lock[Lock Assets<br/>锁定资产]
         Proof[Generate Proof<br/>生成证明]
     end
-    
+
     subgraph "Relayer Network"
         Validator1[Validator 1]
         Validator2[Validator 2]
         ValidatorN[Validator N]
         Consensus[Consensus<br/>共识]
     end
-    
+
     subgraph "Destination Chain"
         Verify[Verify Proof<br/>验证证明]
         Mint[Mint Assets<br/>铸造资产]
     end
-    
+
     Lock --> Proof
     Proof --> Validator1
     Proof --> Validator2
@@ -412,37 +428,42 @@ graph LR
     ValidatorN --> Consensus
     Consensus --> Verify
     Verify --> Mint
-    
+
     style Lock fill:#4CAF50
     style Consensus fill:#2196F3
     style Mint fill:#FF9800
 ```
 
 **支持的链**：
-- Ethereum
-- Polygon
-- Arbitrum
-- Optimism
-- Avalanche
-- BNB Chain
+
+-   Ethereum
+-   Polygon
+-   Arbitrum
+-   Optimism
+-   Avalanche
+-   BNB Chain
 
 **跨链流程**：
+
 1. **锁定阶段**
-   - 用户在源链锁定资产
-   - 生成锁定证明
-   - 触发跨链事件
+
+    - 用户在源链锁定资产
+    - 生成锁定证明
+    - 触发跨链事件
 
 2. **中继阶段**
-   - 验证者监听事件
-   - 验证锁定证明
-   - 达成共识
+
+    - 验证者监听事件
+    - 验证锁定证明
+    - 达成共识
 
 3. **铸造阶段**
-   - 在目标链验证证明
-   - 铸造等量资产
-   - 转账给用户
+    - 在目标链验证证明
+    - 铸造等量资产
+    - 转账给用户
 
-**Skylink核心接口**：
+**Skylink 核心接口**：
+
 ```solidity
 // Skylink Bridge接口
 interface ISkylinkBridge {
@@ -453,13 +474,13 @@ interface ISkylinkBridge {
         uint256 destinationChainId,
         address recipient
     ) external payable returns (bytes32 transferId);
-    
+
     // 领取跨链资产
     function claimBridgedAssets(
         bytes32 transferId,
         bytes memory proof
     ) external returns (bool);
-    
+
     // 查询跨链状态
     function getBridgeStatus(
         bytes32 transferId
@@ -480,6 +501,7 @@ enum BridgeStatus {
 ### 2.5 Compliance Module（合规模块）
 
 **链级合规架构**：
+
 ```mermaid
 graph TB
     subgraph "Compliance Module"
@@ -488,28 +510,28 @@ graph TB
         Geo[Geo Restrictions<br/>地域限制]
         Investor[Investor Type<br/>投资者类型]
     end
-    
+
     subgraph "Enforcement Points"
         Token[Token Transfer<br/>代币转账]
         DEX[DEX Trading<br/>DEX交易]
         Lending[Lending<br/>借贷]
         Bridge[Cross-Chain<br/>跨链]
     end
-    
+
     Identity --> Token
     Transfer --> Token
     Geo --> Token
     Investor --> Token
-    
+
     Identity --> DEX
     Transfer --> DEX
-    
+
     Identity --> Lending
     Investor --> Lending
-    
+
     Identity --> Bridge
     Geo --> Bridge
-    
+
     style Identity fill:#4CAF50
     style Transfer fill:#2196F3
     style Geo fill:#FF9800
@@ -518,62 +540,67 @@ graph TB
 
 **合规规则类型**：
 
-| 规则类型 | 检查内容 | 执行时机 | 可配置性 |
-|---------|---------|---------|---------|
-| **身份验证** | KYC状态、Passport等级 | 每次转账 | 否（强制） |
-| **转账限额** | 单笔/每日限额 | 每次转账 | 是 |
-| **地域限制** | 国家白名单/黑名单 | 每次转账 | 是 |
-| **投资者类型** | 合格投资者、机构投资者 | 购买时 | 是 |
-| **锁定期** | 代币锁定时间 | 转账时 | 是 |
+| 规则类型       | 检查内容                | 执行时机 | 可配置性   |
+| -------------- | ----------------------- | -------- | ---------- |
+| **身份验证**   | KYC 状态、Passport 等级 | 每次转账 | 否（强制） |
+| **转账限额**   | 单笔/每日限额           | 每次转账 | 是         |
+| **地域限制**   | 国家白名单/黑名单       | 每次转账 | 是         |
+| **投资者类型** | 合格投资者、机构投资者  | 购买时   | 是         |
+| **锁定期**     | 代币锁定时间            | 转账时   | 是         |
 
 ---
 
 ## 3. 技术选型分析
 
-### 3.1 为什么选择Cosmos SDK
+### 3.1 为什么选择 Cosmos SDK
 
 **优势**：
-- ✅ **模块化设计**：易于添加自定义模块（如合规模块）
-- ✅ **高性能**：Tendermint共识，7000+ TPS
-- ✅ **互操作性**：IBC协议，原生跨链支持
-- ✅ **主权性**：独立的应用链，完全控制
+
+-   ✅ **模块化设计**：易于添加自定义模块（如合规模块）
+-   ✅ **高性能**：Tendermint 共识，7000+ TPS
+-   ✅ **互操作性**：IBC 协议，原生跨链支持
+-   ✅ **主权性**：独立的应用链，完全控制
 
 **Cosmos SDK vs 其他方案**：
 
-| 特性 | Cosmos SDK | Ethereum L2 | Polkadot Parachain |
-|------|-----------|-------------|-------------------|
-| TPS | 7000+ | 2000-4000 | 1000-2000 |
-| 定制性 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
-| 跨链 | IBC（原生） | 桥接 | XCMP |
-| 开发难度 | 中 | 低 | 高 |
-| 生态成熟度 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
+| 特性       | Cosmos SDK  | Ethereum L2 | Polkadot Parachain |
+| ---------- | ----------- | ----------- | ------------------ |
+| TPS        | 7000+       | 2000-4000   | 1000-2000          |
+| 定制性     | ⭐⭐⭐⭐⭐  | ⭐⭐⭐      | ⭐⭐⭐⭐           |
+| 跨链       | IBC（原生） | 桥接        | XCMP               |
+| 开发难度   | 中          | 低          | 高                 |
+| 生态成熟度 | ⭐⭐⭐⭐    | ⭐⭐⭐⭐⭐  | ⭐⭐⭐             |
 
-### 3.2 为什么需要EVM兼容
+### 3.2 为什么需要 EVM 兼容
 
 **原因**：
-1. **生态兼容**：直接使用现有的EVM工具和DApp
-2. **开发者友好**：Solidity开发者可以无缝迁移
-3. **流动性导入**：可以桥接以太坊生态的资产
-4. **降低门槛**：用户可以使用MetaMask等熟悉的钱包
 
-**Ethermint实现**：
-- 在Cosmos SDK上运行EVM
-- 支持Solidity智能合约
-- 兼容以太坊JSON-RPC
-- 保持Cosmos SDK的模块化优势
+1. **生态兼容**：直接使用现有的 EVM 工具和 DApp
+2. **开发者友好**：Solidity 开发者可以无缝迁移
+3. **流动性导入**：可以桥接以太坊生态的资产
+4. **降低门槛**：用户可以使用 MetaMask 等熟悉的钱包
+
+**Ethermint 实现**：
+
+-   在 Cosmos SDK 上运行 EVM
+-   支持 Solidity 智能合约
+-   兼容以太坊 JSON-RPC
+-   保持 Cosmos SDK 的模块化优势
 
 ### 3.3 模块化设计的优势
 
 **传统单体链 vs 模块化链**：
 
 **传统单体链**：
+
 ```
 [共识层 + 执行层 + 数据可用性层 + 结算层]
 ↓
 难以定制、性能受限、升级困难
 ```
 
-**Plume模块化链**：
+**Plume 模块化链**：
+
 ```
 [共识层: Tendermint]
 [执行层: EVM + CosmWasm]
@@ -597,7 +624,7 @@ sequenceDiagram
     participant Verify as 验证服务
     participant Blockchain as Plume Chain
     participant Nest as Nest Protocol
-    
+
     Issuer->>Arc: 上传资产文档
     Arc->>Verify: 验证资产真实性
     Verify-->>Arc: 验证通过
@@ -618,7 +645,7 @@ sequenceDiagram
     participant Compliance as 合规模块
     participant Token as RWA Token
     participant Nest as Nest Protocol
-    
+
     Investor->>Passport: 完成KYC
     Passport-->>Investor: 获得Passport
     Investor->>Token: 购买RWA代币
@@ -640,7 +667,7 @@ sequenceDiagram
     participant Skylink as Skylink Bridge
     participant Relayer as 中继网络
     participant Target as 目标链
-    
+
     User->>Plume: 发起跨链转账
     Plume->>Skylink: 锁定资产
     Skylink->>Skylink: 生成证明
@@ -665,32 +692,32 @@ graph TB
         Access[访问控制]
         Audit[审计日志]
     end
-    
+
     subgraph "协议层安全"
         Compliance[合规检查]
         RateLimit[速率限制]
         Circuit[熔断机制]
     end
-    
+
     subgraph "区块链层安全"
         Consensus[共识安全]
         Validator[验证者管理]
         Slashing[惩罚机制]
     end
-    
+
     subgraph "基础设施安全"
         Network[网络隔离]
         Encryption[数据加密]
         Backup[灾备恢复]
     end
-    
+
     Auth --> Compliance
     Access --> Compliance
     Compliance --> Consensus
     RateLimit --> Consensus
     Consensus --> Network
     Validator --> Network
-    
+
     style Auth fill:#4CAF50
     style Compliance fill:#2196F3
     style Consensus fill:#FF9800
@@ -700,17 +727,19 @@ graph TB
 ### 5.2 智能合约安全
 
 **安全措施**：
-- ✅ 多次安全审计（Certik、OpenZeppelin、Trail of Bits）
-- ✅ 形式化验证
-- ✅ Bug赏金计划
-- ✅ 时间锁升级
-- ✅ 多签治理
+
+-   ✅ 多次安全审计（Certik、OpenZeppelin、Trail of Bits）
+-   ✅ 形式化验证
+-   ✅ Bug 赏金计划
+-   ✅ 时间锁升级
+-   ✅ 多签治理
 
 ### 5.3 跨链安全
 
-**Skylink安全机制**：
-1. **多签验证**：需要2/3验证者签名
-2. **欺诈证明**：7天挑战期
+**Skylink 安全机制**：
+
+1. **多签验证**：需要 2/3 验证者签名
+2. **欺诈证明**：7 天挑战期
 3. **资产上限**：单笔转账限额
 4. **紧急暂停**：可暂停跨链功能
 
@@ -718,12 +747,13 @@ graph TB
 
 ## 📚 参考资源
 
-- [Plume Network官网](https://plumenetwork.xyz)
-- [Plume文档](https://docs.plumenetwork.xyz)
-- [Cosmos SDK文档](https://docs.cosmos.network)
-- [Tendermint文档](https://docs.tendermint.com)
+-   [Plume Network 官网](https://plume.org)
+-   [Plume 文档](https://docs.plume.org)
+-   [Plume Portal](https://portal.plume.org)
+-   [Cosmos SDK 文档](https://docs.cosmos.network)
+-   [Tendermint 文档](https://docs.tendermint.com)
 
 ---
 
-**文档维护**: RWA-HUSD技术团队  
+**文档维护**: RWA-HUSD 技术团队  
 **最后更新**: 2025-10-09 09:33:30 CST

@@ -1,9 +1,9 @@
 # Centrifuge 业务流程与技术实现深度解析
 
-**文档版本**: v2.0  
-**创建时间**: 2025-10-13 10:20:00 CST  
-**文档类型**: 业务流程导向的技术深度解析  
-**信息来源**: Centrifuge 官方文档 (https://updated-docs.documentation-569.pages.dev/)  
+**文档版本**: v2.0
+**创建时间**: 2025-10-13 10:20:00 CST
+**文档类型**: 业务流程导向的技术深度解析
+**信息来源**: Centrifuge 官方文档 (https://docs.centrifuge.io/)
 **备份文档**: technical-deep-dive-backup-20251013-101816.md
 
 ---
