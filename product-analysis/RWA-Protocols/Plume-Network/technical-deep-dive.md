@@ -67,6 +67,85 @@ Plume Network 采用**Optimistic Rollup + Arc 技术栈**:
 
 **核心合约**: ArcFactory, ArcToken, NestWallet, PlumeBridge
 
+#### 1.2.4 系统架构图
+
+```mermaid
+graph TB
+    subgraph "资产层"
+        A1[房地产]
+        A2[艺术品]
+        A3[碳信用]
+        A4[私募信贷]
+    end
+
+    subgraph "Plume L2区块链"
+        L1[Optimistic Rollup]
+        L2[Sequencer<br/>交易排序器]
+        L3[Verifier<br/>欺诈证明]
+    end
+
+    subgraph "Arc技术栈"
+        AR1[ArcFactory<br/>代币工厂]
+        AR2[ArcToken<br/>资产代币]
+        AR3[合规模块]
+    end
+
+    subgraph "DeFi层"
+        D1[流动性挖矿]
+        D2[借贷协议]
+        D3[DEX交易]
+    end
+
+    subgraph "用户层"
+        U1[Nest钱包<br/>内置合规]
+        U2[跨链桥接]
+    end
+
+    subgraph "以太坊主网"
+        E1[Ethereum L1]
+        E2[状态根]
+    end
+
+    A1 & A2 & A3 & A4 --> AR1
+    AR1 --> AR2
+    AR2 --> AR3
+    AR3 --> L1
+    L1 --> L2 & L3
+    L1 --> E1
+    E1 --> E2
+
+    AR2 --> D1 & D2 & D3
+    D1 & D2 & D3 --> U1
+    U1 --> U2
+    U2 --> E1
+
+    style L1 fill:#e1f5ff
+    style L2 fill:#e1f5ff
+    style L3 fill:#e1f5ff
+    style AR1 fill:#4CAF50
+    style AR2 fill:#4CAF50
+    style AR3 fill:#4CAF50
+    style U1 fill:#FF9800
+    style E1 fill:#fff4e1
+```
+
+**系统架构说明**:
+
+-   **资产层**: 支持多种 RWA 类型(房地产、艺术品、碳信用、私募信贷)
+-   **Plume L2**: 基于 Optimistic Rollup 的 Layer 2,低 Gas 费,高 TPS
+-   **Arc 技术栈**: 模块化资产代币化框架,内置合规模块
+-   **DeFi 层**: 完整的 DeFi 生态(流动性挖矿、借贷、DEX)
+-   **用户层**: Nest 智能合约钱包(内置合规) + 跨链桥接
+-   **以太坊主网**: 状态根锚定,继承以太坊安全性
+
+**核心特性**:
+
+-   **RWA 专用 L2**: 专为 RWA 优化的区块链基础设施
+-   **Arc 技术栈**: 模块化设计,支持快速部署新资产类型
+-   **Nest 钱包**: 内置合规,简化用户体验
+-   **低成本**: 极低 Gas 费,适合高频小额交易
+-   **Optimistic Rollup**: 继承以太坊安全性,7 天挑战期
+
 ---
 
 ### 1.3 官方资源
