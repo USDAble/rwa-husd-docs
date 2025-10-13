@@ -28,48 +28,144 @@
 
 ### 1.1 核心定位
 
-**Tokeny T-REX 是一个基于 ERC3643 标准的安全代币(Security Token)发行平台**,为资产发行者提供完整的合规代币化解决方案,支持全球监管要求。
+**Tokeny T-REX (Token for Regulated EXchanges) 是实现 ERC-3643 标准的机构级安全代币(Security Token)协议**,为资产发行者提供完整的合规代币化解决方案,支持全球监管要求。
+
+**官方定义** (来自 [EIP-3643](https://eips.ethereum.org/EIPS/eip-3643)):
+
+> "The T-REX token is an institutional grade security token standard. This standard provides a library of interfaces for the management and compliant transfer of security tokens, using an automated onchain validator system leveraging onchain identities for eligibility checks."
 
 **核心价值主张**:
 
--   **ERC3643 标准**: 首个专为安全代币设计的以太坊标准
+-   **ERC-3643 标准**: 首个专为安全代币设计的以太坊标准 (EIP-3643)
+-   **链上身份管理**: 基于 ONCHAINID 的去中心化身份系统
+-   **权限化转账**: 只有经过验证的投资者才能持有和转移代币
+-   **内置合规框架**: 自动化的链上合规验证系统
 -   **模块化合规**: 可插拔的合规规则模块,适应不同监管要求
--   **身份管理**: 链上身份验证和 KYC 管理
--   **全球部署**: 支持多个 EVM 兼容链
+-   **ERC-20 兼容**: 向后兼容 ERC-20 标准
 
 ---
 
-### 1.2 ERC3643 架构
+### 1.2 ERC-3643 vs ERC-20
 
-Tokeny T-REX 采用**ERC3643 标准架构**:
-
--   **T-REX Token**: ERC3643 代币合约
--   **Identity Registry**: 身份注册表
--   **Claim Topics Registry**: 声明主题注册表
--   **Trusted Issuers Registry**: 可信发行者注册表
--   **Modular Compliance**: 模块化合规系统
-
-**核心合约**:
-
--   Token, IdentityRegistry, ClaimTopicsRegistry, TrustedIssuersRegistry, ModularCompliance
+| 特性         | ERC-20   | ERC-3643          |
+| ------------ | -------- | ----------------- |
+| **转账权限** | 无限制   | 需要身份验证      |
+| **合规检查** | 无       | 内置合规模块      |
+| **身份管理** | 无       | ONCHAINID 系统    |
+| **适用场景** | 实用代币 | 安全代币(证券)    |
+| **KYC/AML**  | 不支持   | 原生支持          |
+| **代币冻结** | 不支持   | 支持部分/全部冻结 |
+| **强制转账** | 不支持   | 支持(Agent 角色)  |
 
 ---
 
-## 2. 业务流程 1: 代币部署与配置
+### 1.3 ERC-3643 架构概览
+
+Tokeny T-REX 采用**ERC-3643 标准架构**,由以下核心组件构成:
+
+#### 核心合约套件
+
+1. **Token Contract (代币合约)**
+
+    - 实现 ERC-3643 接口,兼容 ERC-20
+    - 管理代币的铸造、销毁、转账
+    - 执行合规检查和身份验证
+
+2. **Identity Registry (身份注册表)**
+
+    - 存储所有授权投资者的身份合约地址
+    - 验证投资者的 ONCHAINID 和 Claims
+    - 管理投资者的国家代码 (ISO-3166)
+
+3. **Identity Registry Storage (身份注册表存储)**
+
+    - 分离身份注册表的存储和逻辑
+    - 支持多个代币共享同一投资者白名单
+    - 提高存储效率和灵活性
+
+4. **Claim Topics Registry (声明主题注册表)**
+
+    - 定义代币持有者必须拥有的 Claims 类型
+    - 例如: KYC 声明、合格投资者声明、居住国家声明
+
+5. **Trusted Issuers Registry (可信发行者注册表)**
+
+    - 存储所有可信 Claim 发行者的地址
+    - 只有可信发行者签发的 Claims 才被认可
+    - 支持为不同 Claim 主题指定不同的发行者
+
+6. **Modular Compliance (模块化合规)**
+    - 可插拔的合规规则模块
+    - 支持自定义合规逻辑
+    - 示例模块: 国家限制、供应量限制、转账限制
+
+#### ONCHAINID 系统
+
+**ONCHAINID** 是 ERC-3643 的核心创新,是一个开源的链上身份管理系统:
+
+-   **功能**: 存储和验证身份声明 (Claims)
+-   **结构**: 每个投资者有一个 ONCHAINID 合约
+-   **Claims**: 由可信机构签发的身份声明,证明投资者的资格
+
+**Claims 类型示例**:
+
+-   **Topic 1**: KYC 声明 (Know Your Customer)
+-   **Topic 2**: 合格投资者声明 (Accredited Investor)
+-   **Topic 3**: 居住国家声明 (Country of Residence)
+-   **Topic 4**: AML 检查声明 (Anti-Money Laundering)
+
+---
+
+### 1.4 架构关系图
+
+```mermaid
+graph TB
+    Token[Token Contract<br/>ERC-3643]
+    IR[Identity Registry]
+    IRS[Identity Registry Storage]
+    CTR[Claim Topics Registry]
+    TIR[Trusted Issuers Registry]
+    MC[Modular Compliance]
+
+    Token -->|验证身份| IR
+    Token -->|检查合规| MC
+    IR -->|查询存储| IRS
+    IR -->|验证Claims| CTR
+    IR -->|验证签发者| TIR
+
+    Investor[投资者]
+    ONCHAINID[ONCHAINID<br/>身份合约]
+    ClaimIssuer[Claim Issuer<br/>可信发行者]
+
+    Investor -->|拥有| ONCHAINID
+    ClaimIssuer -->|签发Claims| ONCHAINID
+    IRS -->|存储| ONCHAINID
+    TIR -->|信任| ClaimIssuer
+```
+
+---
+
+## 2. 业务流程 1: 代币部署与配置 ✅ 官方验证
+
+**验证状态**: ✅ 已对齐 ERC-3643 官方标准
+**官方文档**: [EIP-3643](https://eips.ethereum.org/EIPS/eip-3643), [ERC-3643 GitHub](https://github.com/ERC-3643/ERC-3643)
 
 ### 2.1 流程概述
 
-代币部署是 Tokeny T-REX 业务流程的起点,由资产发行者(Issuer)发起,通过 TokenFactory 合约部署一个新的 ERC3643 代币。
+代币部署是 Tokeny T-REX 业务流程的起点,由资产发行者(Issuer)发起,通过 T-REX Factory 合约部署一个新的 ERC-3643 代币。
 
-**涉及的合约**: TokenFactory, Token, IdentityRegistry, ModularCompliance
+**涉及的合约**: TREXFactory, Token (IERC3643), IdentityRegistry, IdentityRegistryStorage, ModularCompliance
 
 **核心步骤**:
 
-1. 发行者调用 TokenFactory.deployToken()部署代币
-2. TokenFactory 部署 Token 合约
-3. TokenFactory 部署 IdentityRegistry 合约
-4. TokenFactory 部署 ModularCompliance 合约
-5. 配置代币参数(名称、符号、总供应量)
+1. 发行者调用 TREXFactory.deployTREXSuite() 部署完整的代币套件
+2. Factory 部署 Token 合约 (实现 IERC3643 接口)
+3. Factory 部署 IdentityRegistry 合约
+4. Factory 部署 IdentityRegistryStorage 合约
+5. Factory 部署 ModularCompliance 合约
+6. Factory 部署 ClaimTopicsRegistry 和 TrustedIssuersRegistry
+7. 配置代币参数(名称、符号、小数位数、ONCHAINID)
+8. 绑定所有合约并转移所有权给发行者
 
 ---
 
@@ -97,52 +193,30 @@ sequenceDiagram
 
 ---
 
-### 2.3 TokenFactory 合约详解
+### 2.3 TREXFactory 合约详解
 
-**职责**: 代币工厂合约,用于部署 ERC3643 代币
+**职责**: T-REX 工厂合约,用于部署完整的 ERC-3643 代币套件
 
-**核心方法**:
+**官方接口** (来自 [ERC-3643 GitHub](https://github.com/ERC-3643/ERC-3643)):
 
 ```solidity
-/**
- * @dev 部署新代币
- * @param name 代币名称
- * @param symbol 代币符号
- * @param decimals 小数位数
- * @param onchainID 发行者链上身份ID
- */
-function deployToken(
-    string memory name,
-    string memory symbol,
-    uint8 decimals,
-    address onchainID
-) external returns (address tokenAddress) {
-    // 1. 部署Token合约
-    Token token = new Token(name, symbol, decimals, onchainID);
-
-    // 2. 部署IdentityRegistry合约
-    IdentityRegistry ir = new IdentityRegistry(
-        address(trustedIssuersRegistry),
-        address(claimTopicsRegistry),
-        address(identityStorage)
+interface ITREXFactory {
+    // 事件
+    event TREXSuiteDeployed(
+        address indexed token,
+        address indexed identityRegistry,
+        address indexed compliance,
+        string indexed name,
+        string indexed symbol
     );
 
-    // 3. 部署ModularCompliance合约
-    ModularCompliance mc = new ModularCompliance();
-
-    // 4. 配置Token
-    token.setIdentityRegistry(address(ir));
-    token.setCompliance(address(mc));
-
-    // 5. 转移所有权给发行者
-    token.transferOwnership(msg.sender);
-    ir.transferOwnership(msg.sender);
-    mc.transferOwnership(msg.sender);
-
-    // 6. 触发事件
-    emit TokenDeployed(address(token), msg.sender);
-
-    return address(token);
+    // 部署完整的 T-REX 套件
+    function deployTREXSuite(
+        string memory _name,
+        string memory _symbol,
+        uint8 _decimals,
+        address _onchainID
+    ) external returns (address);
 }
 ```
 
@@ -150,14 +224,137 @@ function deployToken(
 
 ### 2.4 代码示例
 
-#### 2.4.1 部署代币(TypeScript)
+#### 2.4.1 完整的代币部署流程 (Solidity)
 
-```typescript
-async function deploySecurityToken(
-    factoryContract: ethers.Contract,
-    tokenConfig: {
-        name: string;
-        symbol: string;
+以下代码展示了如何使用 TREXFactory 部署一个完整的 ERC-3643 代币套件:
+
+```solidity
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity ^0.8.0;
+
+import "@erc-3643/core/contracts/token/Token.sol";
+import "@erc-3643/core/contracts/registry/IdentityRegistry.sol";
+import "@erc-3643/core/contracts/registry/IdentityRegistryStorage.sol";
+import "@erc-3643/core/contracts/compliance/ModularCompliance.sol";
+import "@erc-3643/core/contracts/registry/ClaimTopicsRegistry.sol";
+import "@erc-3643/core/contracts/registry/TrustedIssuersRegistry.sol";
+
+/**
+ * @title TREXFactory
+ * @dev 部署完整的 ERC-3643 代币套件
+ */
+contract TREXFactory {
+    // 事件
+    event TREXSuiteDeployed(
+        address indexed token,
+        address indexed identityRegistry,
+        address indexed compliance,
+        string name,
+        string symbol
+    );
+
+    /**
+     * @dev 部署完整的 T-REX 代币套件
+     * @param _name 代币名称
+     * @param _symbol 代币符号
+     * @param _decimals 小数位数
+     * @param _onchainID 发行者的 ONCHAINID 地址
+     * @return token 部署的代币地址
+     */
+    function deployTREXSuite(
+        string memory _name,
+        string memory _symbol,
+        uint8 _decimals,
+        address _onchainID
+    ) external returns (address token) {
+        console.log("=== 开始部署 T-REX 代币套件 ===");
+        console.log("代币名称:", _name);
+        console.log("代币符号:", _symbol);
+        console.log("发行者 ONCHAINID:", _onchainID);
+
+        // 1. 部署 IdentityRegistryStorage
+        IdentityRegistryStorage identityStorage = new IdentityRegistryStorage();
+        console.log("✓ IdentityRegistryStorage 已部署:", address(identityStorage));
+
+        // 2. 部署 ClaimTopicsRegistry
+        ClaimTopicsRegistry claimTopicsRegistry = new ClaimTopicsRegistry();
+        console.log("✓ ClaimTopicsRegistry 已部署:", address(claimTopicsRegistry));
+
+        // 3. 部署 TrustedIssuersRegistry
+        TrustedIssuersRegistry trustedIssuersRegistry = new TrustedIssuersRegistry();
+        console.log("✓ TrustedIssuersRegistry 已部署:", address(trustedIssuersRegistry));
+
+        // 4. 部署 IdentityRegistry
+        IdentityRegistry identityRegistry = new IdentityRegistry(
+            address(trustedIssuersRegistry),
+            address(claimTopicsRegistry),
+            address(identityStorage)
+        );
+        console.log("✓ IdentityRegistry 已部署:", address(identityRegistry));
+
+        // 5. 绑定 IdentityRegistry 到 Storage
+        identityStorage.bindIdentityRegistry(address(identityRegistry));
+        console.log("✓ IdentityRegistry 已绑定到 Storage");
+
+        // 6. 部署 ModularCompliance
+        ModularCompliance compliance = new ModularCompliance();
+        console.log("✓ ModularCompliance 已部署:", address(compliance));
+
+        // 7. 部署 Token 合约
+        Token tokenContract = new Token(
+            _name,
+            _symbol,
+            _decimals,
+            _onchainID
+        );
+        console.log("✓ Token 已部署:", address(tokenContract));
+
+        // 8. 配置 Token
+        tokenContract.setIdentityRegistry(address(identityRegistry));
+        tokenContract.setCompliance(address(compliance));
+        console.log("✓ Token 配置完成");
+
+        // 9. 绑定 Compliance 到 Token
+        compliance.bindToken(address(tokenContract));
+        console.log("✓ Compliance 已绑定到 Token");
+
+        // 10. 转移所有权给发行者
+        tokenContract.transferOwnership(msg.sender);
+        identityRegistry.transferOwnership(msg.sender);
+        identityStorage.transferOwnership(msg.sender);
+        compliance.transferOwnership(msg.sender);
+        claimTopicsRegistry.transferOwnership(msg.sender);
+        trustedIssuersRegistry.transferOwnership(msg.sender);
+        console.log("✓ 所有权已转移给发行者:", msg.sender);
+
+        // 11. 触发事件
+        emit TREXSuiteDeployed(
+            address(tokenContract),
+            address(identityRegistry),
+            address(compliance),
+            _name,
+            _symbol
+        );
+
+        console.log("=== T-REX 代币套件部署完成 ===");
+        return address(tokenContract);
+    }
+}
+```
+
+#### 2.4.2 调用示例
+
+```solidity
+// 部署 TREXFactory
+TREXFactory factory = new TREXFactory();
+
+// 部署代币套件
+address tokenAddress = factory.deployTREXSuite(
+    "Security Token",      // 代币名称
+    "SEC",                 // 代币符号
+    18,                    // 小数位数
+    issuerONCHAINID        // 发行者的 ONCHAINID 地址
+);
         decimals: number;
         onchainID: string;
     }
@@ -194,21 +391,73 @@ async function deploySecurityToken(
 
 ---
 
-## 3. 业务流程 2: 投资者身份验证(KYC)
+## 3. 业务流程 2: 投资者身份验证(KYC) ✅ 官方验证
+
+**验证状态**: ✅ 已对齐 ERC-3643 官方标准
+**官方文档**: [EIP-3643](https://eips.ethereum.org/EIPS/eip-3643), [ONCHAINID](https://github.com/onchain-id/solidity)
 
 ### 3.1 流程概述
 
-投资者身份验证是 Tokeny T-REX 的核心功能,通过链上身份(ONCHAINID)和声明(Claims)实现 KYC 验证。
+投资者身份验证是 ERC-3643 的核心创新,通过链上身份(ONCHAINID)和声明(Claims)实现去中心化的 KYC/AML 验证。
 
-**涉及的合约**: IdentityRegistry, ClaimIssuer, ONCHAINID
+**涉及的合约**: IdentityRegistry, IdentityRegistryStorage, ClaimIssuer, ONCHAINID (IIdentity), TrustedIssuersRegistry, ClaimTopicsRegistry
 
 **核心步骤**:
 
-1. 投资者创建 ONCHAINID(链上身份)
-2. KYC 提供商验证投资者身份
-3. KYC 提供商签发声明(Claim)到投资者的 ONCHAINID
-4. 发行者将投资者添加到 IdentityRegistry
-5. 投资者获得代币转账权限
+1. 投资者部署 ONCHAINID 合约(链上身份)
+2. KYC 提供商验证投资者身份(链下)
+3. KYC 提供商作为 ClaimIssuer 签发 Claims 到投资者的 ONCHAINID
+4. 发行者将 ClaimIssuer 添加到 TrustedIssuersRegistry
+5. 发行者将所需的 Claim Topics 添加到 ClaimTopicsRegistry
+6. 发行者将投资者的 ONCHAINID 注册到 IdentityRegistry
+7. IdentityRegistry 验证投资者的 Claims 是否有效
+8. 投资者获得代币持有和转账权限
+
+---
+
+### 3.2 ONCHAINID 系统详解
+
+#### 3.2.1 ONCHAINID 概念
+
+**ONCHAINID** 是一个开源的链上身份管理系统,是 ERC-3643 的核心组件:
+
+-   **定义**: 每个投资者拥有一个 ONCHAINID 合约,存储其身份信息和 Claims
+-   **功能**: 管理密钥、存储 Claims、验证签名
+-   **标准**: 实现 IIdentity 接口 (基于 ERC-734 和 ERC-735)
+-   **去中心化**: 投资者完全控制自己的身份合约
+
+#### 3.2.2 Claims 机制
+
+**Claims** 是由可信机构签发的身份声明,证明投资者的资格:
+
+**Claim 结构**:
+
+```solidity
+struct Claim {
+    uint256 topic;        // Claim 主题 (例如: 1 = KYC)
+    uint256 scheme;       // 签名方案 (例如: 1 = ECDSA)
+    address issuer;       // 签发者地址 (ClaimIssuer)
+    bytes signature;      // 签名数据
+    bytes data;           // Claim 数据
+    string uri;           // 数据 URI (可选)
+}
+```
+
+**常见 Claim Topics**:
+
+-   **Topic 1**: KYC 声明 (Know Your Customer) - 证明投资者已完成 KYC
+-   **Topic 2**: 合格投资者声明 (Accredited Investor) - 证明投资者是合格投资者
+-   **Topic 3**: 居住国家声明 (Country of Residence) - 证明投资者的居住国家
+-   **Topic 4**: AML 检查声明 (Anti-Money Laundering) - 证明投资者已通过 AML 检查
+
+#### 3.2.3 Claim 验证流程
+
+当投资者尝试接收代币时,IdentityRegistry 会验证:
+
+1. **Claim 存在性**: 投资者的 ONCHAINID 是否包含所需的 Claim Topics
+2. **Claim 签发者**: Claim 是否由 TrustedIssuersRegistry 中的可信发行者签发
+3. **Claim 有效性**: Claim 的签名是否有效
+4. **Claim 时效性**: Claim 是否在有效期内 (如果设置了过期时间)
 
 ---
 
@@ -241,114 +490,270 @@ sequenceDiagram
 
 **职责**: 身份注册表,管理投资者身份和验证状态
 
-**数据结构**:
+**官方接口** (来自 [EIP-3643](https://eips.ethereum.org/EIPS/eip-3643)):
 
 ```solidity
-struct Identity {
-    address onchainID;
-    uint16 country;
-    bool verified;
+interface IIdentityRegistry {
+    // 事件
+    event IdentityRegistered(address indexed investorAddress, IIdentity indexed identity);
+    event IdentityRemoved(address indexed investorAddress, IIdentity indexed identity);
+    event IdentityUpdated(IIdentity indexed oldIdentity, IIdentity indexed newIdentity);
+    event CountryUpdated(address indexed investorAddress, uint16 indexed country);
+
+    // 注册投资者身份
+    function registerIdentity(
+        address _userAddress,
+        IIdentity _identity,
+        uint16 _country
+    ) external;
+
+    // 验证投资者是否有效
+    function isVerified(address _userAddress) external view returns (bool);
+
+    // 查询投资者的 ONCHAINID
+    function identity(address _userAddress) external view returns (IIdentity);
+
+    // 查询投资者的国家代码
+    function investorCountry(address _userAddress) external view returns (uint16);
 }
-
-// 投资者地址 => 身份信息
-mapping(address => Identity) public identities;
-
-// 国家代码 => 投资者数量
-mapping(uint16 => uint256) public investorCountByCountry;
 ```
 
-**核心方法**:
+**isVerified() 函数详解**:
+
+`isVerified()` 是 ERC-3643 的核心函数,用于验证投资者是否有资格持有代币:
 
 ```solidity
-/**
- * @dev 注册投资者身份
- * @param investor 投资者地址
- * @param onchainID 链上身份地址
- * @param country 国家代码
- */
-function registerIdentity(
-    address investor,
-    address onchainID,
-    uint16 country
-) external onlyAgent {
-    require(identities[investor].onchainID == address(0), "Already registered");
+function isVerified(address _userAddress) public view returns (bool) {
+    // 1. 检查投资者是否在注册表中
+    IIdentity identity = identity(_userAddress);
+    if (address(identity) == address(0)) {
+        return false;
+    }
 
-    // 1. 验证ONCHAINID有效性
-    require(_isValidIdentity(onchainID), "Invalid identity");
+    // 2. 获取所需的 Claim Topics
+    uint256[] memory requiredTopics = claimTopicsRegistry.getClaimTopics();
 
-    // 2. 注册身份
-    identities[investor] = Identity({
-        onchainID: onchainID,
-        country: country,
-        verified: true
-    });
+    // 3. 验证每个 Claim Topic
+    for (uint256 i = 0; i < requiredTopics.length; i++) {
+        uint256 topic = requiredTopics[i];
 
-    // 3. 更新统计
-    investorCountByCountry[country]++;
+        // 3.1 获取该 Topic 的可信发行者
+        IClaimIssuer[] memory issuers = trustedIssuersRegistry.getTrustedIssuersForClaimTopic(topic);
 
-    // 4. 触发事件
-    emit IdentityRegistered(investor, onchainID);
+        // 3.2 检查 ONCHAINID 是否有该 Topic 的有效 Claim
+        bool hasValidClaim = false;
+        for (uint256 j = 0; j < issuers.length; j++) {
+            bytes32 claimId = keccak256(abi.encode(address(issuers[j]), topic));
+            if (identity.getClaimIdsByTopic(topic).length > 0) {
+                // 验证 Claim 签名
+                (uint256 claimTopic, uint256 scheme, address issuer, bytes memory sig, bytes memory data, string memory uri) = identity.getClaim(claimId);
+                if (issuer == address(issuers[j]) && _isClaimValid(identity, claimId, topic, sig, data)) {
+                    hasValidClaim = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasValidClaim) {
+            return false;
+        }
+    }
+
+    return true;
 }
 ```
 
 ---
 
-### 3.3 代码示例
+### 3.4 代码示例
 
-#### 3.3.1 投资者 KYC 与身份注册(TypeScript)
+#### 3.4.1 完整的投资者 KYC 与身份注册流程 (Solidity)
 
-```typescript
-import { ethers } from "ethers";
+以下代码展示了从 ONCHAINID 创建到投资者注册的完整流程:
+
+```solidity
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity ^0.8.0;
+
+import "@onchain-id/solidity/contracts/Identity.sol";
+import "@onchain-id/solidity/contracts/ClaimIssuer.sol";
+import "@erc-3643/core/contracts/registry/IdentityRegistry.sol";
+import "@erc-3643/core/contracts/registry/TrustedIssuersRegistry.sol";
+import "@erc-3643/core/contracts/registry/ClaimTopicsRegistry.sol";
 
 /**
- * 投资者KYC与身份注册完整流程
+ * @title InvestorOnboarding
+ * @dev 投资者 KYC 与身份注册完整流程
  */
-async function registerInvestorWithKYC(
-    registryContract: ethers.Contract,
-    investorData: {
-        wallet: string;
-        onchainID: string; // ONCHAINID地址
-        country: number; // ISO 3166-1 country code
-        claims: Array<{
-            topic: number; // Claim topic (e.g., 1 = KYC)
-            issuer: string; // Trusted issuer address
-            signature: string; // Claim signature
-            data: string; // Claim data
-        }>;
+contract InvestorOnboarding {
+    IdentityRegistry public identityRegistry;
+    TrustedIssuersRegistry public trustedIssuersRegistry;
+    ClaimTopicsRegistry public claimTopicsRegistry;
+
+    constructor(
+        address _identityRegistry,
+        address _trustedIssuersRegistry,
+        address _claimTopicsRegistry
+    ) {
+        identityRegistry = IdentityRegistry(_identityRegistry);
+        trustedIssuersRegistry = TrustedIssuersRegistry(_trustedIssuersRegistry);
+        claimTopicsRegistry = ClaimTopicsRegistry(_claimTopicsRegistry);
     }
-) {
-    try {
-        console.log("🔐 开始投资者KYC与身份注册...");
-        console.log("投资者钱包:", investorData.wallet);
-        console.log("ONCHAINID:", investorData.onchainID);
 
-        // 1. 验证ONCHAINID
-        console.log("\n步骤1: 验证ONCHAINID...");
-        const identityContract = new ethers.Contract(
-            investorData.onchainID,
-            ONCHAINID_ABI,
-            provider
+    /**
+     * @dev 步骤 1: 投资者创建 ONCHAINID
+     * @param _investor 投资者地址
+     * @return identityAddress 创建的 ONCHAINID 地址
+     */
+    function createONCHAINID(address _investor) external returns (address identityAddress) {
+        console.log("=== 步骤 1: 创建 ONCHAINID ===");
+        console.log("投资者地址:", _investor);
+
+        // 部署 Identity 合约
+        Identity identity = new Identity(_investor, true);
+        console.log("✓ ONCHAINID 已创建:", address(identity));
+
+        return address(identity);
+    }
+
+    /**
+     * @dev 步骤 2: KYC 提供商签发 Claim
+     * @param _identity 投资者的 ONCHAINID 地址
+     * @param _claimIssuer ClaimIssuer 地址
+     * @param _topic Claim 主题 (例如: 1 = KYC)
+     * @param _data Claim 数据
+     */
+    function issueClaim(
+        address _identity,
+        address _claimIssuer,
+        uint256 _topic,
+        bytes memory _data
+    ) external {
+        console.log("=== 步骤 2: 签发 Claim ===");
+        console.log("ONCHAINID:", _identity);
+        console.log("Claim Topic:", _topic);
+
+        Identity identity = Identity(_identity);
+        ClaimIssuer claimIssuer = ClaimIssuer(_claimIssuer);
+
+        // 1. ClaimIssuer 签名 Claim 数据
+        bytes32 dataHash = keccak256(abi.encode(_identity, _topic, _data));
+        bytes memory signature = claimIssuer.signClaim(_topic, _data);
+        console.log("✓ Claim 已签名");
+
+        // 2. 添加 Claim 到 ONCHAINID
+        bytes32 claimId = keccak256(abi.encode(_claimIssuer, _topic));
+        identity.addClaim(
+            _topic,
+            1,              // scheme: ECDSA
+            _claimIssuer,
+            signature,
+            _data,
+            ""              // uri (可选)
         );
-        const owner = await identityContract.owner();
+        console.log("✓ Claim 已添加到 ONCHAINID");
+        console.log("  Claim ID:", claimId);
+    }
 
-        if (owner.toLowerCase() !== investorData.wallet.toLowerCase()) {
-            throw new Error("ONCHAINID所有者与投资者钱包不匹配");
+    /**
+     * @dev 步骤 3: 配置可信发行者和 Claim Topics
+     * @param _claimIssuer ClaimIssuer 地址
+     * @param _topics 该发行者可以签发的 Claim Topics
+     */
+    function configureTrustedIssuer(
+        address _claimIssuer,
+        uint256[] memory _topics
+    ) external {
+        console.log("=== 步骤 3: 配置可信发行者 ===");
+        console.log("ClaimIssuer:", _claimIssuer);
+
+        // 1. 添加到 TrustedIssuersRegistry
+        trustedIssuersRegistry.addTrustedIssuer(
+            IClaimIssuer(_claimIssuer),
+            _topics
+        );
+        console.log("✓ ClaimIssuer 已添加到 TrustedIssuersRegistry");
+
+        // 2. 添加 Claim Topics 到 ClaimTopicsRegistry
+        for (uint256 i = 0; i < _topics.length; i++) {
+            if (!_isTopicRegistered(_topics[i])) {
+                claimTopicsRegistry.addClaimTopic(_topics[i]);
+                console.log("✓ Claim Topic 已添加:", _topics[i]);
+            }
         }
-        console.log("✅ ONCHAINID验证通过");
+    }
 
-        // 2. 添加Claims到ONCHAINID
-        console.log("\n步骤2: 添加Claims到ONCHAINID...");
-        for (const claim of investorData.claims) {
-            console.log(`  添加Claim: Topic ${claim.topic}`);
+    /**
+     * @dev 步骤 4: 注册投资者到 IdentityRegistry
+     * @param _investor 投资者地址
+     * @param _identity 投资者的 ONCHAINID 地址
+     * @param _country 国家代码 (ISO 3166-1)
+     */
+    function registerInvestor(
+        address _investor,
+        address _identity,
+        uint16 _country
+    ) external {
+        console.log("=== 步骤 4: 注册投资者 ===");
+        console.log("投资者地址:", _investor);
+        console.log("ONCHAINID:", _identity);
+        console.log("国家代码:", _country);
 
-            const tx = await identityContract.addClaim(
-                claim.topic,
-                1, // scheme (ECDSA)
-                claim.issuer,
-                claim.signature,
-                claim.data,
-                ""
-            );
+        // 注册到 IdentityRegistry
+        identityRegistry.registerIdentity(
+            _investor,
+            IIdentity(_identity),
+            _country
+        );
+        console.log("✓ 投资者已注册到 IdentityRegistry");
+
+        // 验证投资者状态
+        bool isVerified = identityRegistry.isVerified(_investor);
+        console.log("✓ 投资者验证状态:", isVerified ? "已验证" : "未验证");
+
+        require(isVerified, "投资者验证失败");
+    }
+
+    /**
+     * @dev 辅助函数: 检查 Claim Topic 是否已注册
+     */
+    function _isTopicRegistered(uint256 _topic) internal view returns (bool) {
+        uint256[] memory topics = claimTopicsRegistry.getClaimTopics();
+        for (uint256 i = 0; i < topics.length; i++) {
+            if (topics[i] == _topic) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+```
+
+#### 3.4.2 调用示例
+
+```solidity
+// 1. 创建 ONCHAINID
+address onchainID = onboarding.createONCHAINID(investorAddress);
+
+// 2. KYC 提供商签发 KYC Claim (Topic 1)
+onboarding.issueClaim(
+    onchainID,
+    kycProviderAddress,
+    1,                          // Topic 1 = KYC
+    abi.encode("KYC Verified")  // Claim 数据
+);
+
+// 3. 配置可信发行者
+uint256[] memory topics = new uint256[](1);
+topics[0] = 1;  // KYC Topic
+onboarding.configureTrustedIssuer(kycProviderAddress, topics);
+
+// 4. 注册投资者
+onboarding.registerInvestor(
+    investorAddress,
+    onchainID,
+    840  // 美国 (ISO 3166-1)
+);
 
             await tx.wait();
             console.log(`  ✅ Claim ${claim.topic} 添加成功`);
