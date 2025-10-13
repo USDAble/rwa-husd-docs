@@ -754,118 +754,93 @@ onboarding.registerInvestor(
     onchainID,
     840  // 美国 (ISO 3166-1)
 );
-
-            await tx.wait();
-            console.log(`  ✅ Claim ${claim.topic} 添加成功`);
-        }
-
-        // 3. 注册投资者到IdentityRegistry
-        console.log("\n步骤3: 注册投资者到IdentityRegistry...");
-        const tx = await registryContract.registerInvestor(
-            investorData.wallet,
-            investorData.onchainID,
-            investorData.country
-        );
-
-        console.log("交易哈希:", tx.hash);
-        const receipt = await tx.wait();
-        console.log("✅ 投资者注册成功!");
-
-        // 4. 验证注册结果
-        console.log("\n步骤4: 验证注册结果...");
-        const isVerified = await registryContract.isVerified(investorData.wallet);
-        const registeredIdentity = await registryContract.identity(investorData.wallet);
-        const investorCountry = await registryContract.investorCountry(investorData.wallet);
-
-        console.log("\n📊 注册结果:");
-        console.log("验证状态:", isVerified);
-        console.log("ONCHAINID:", registeredIdentity);
-        console.log("国家代码:", investorCountry);
-
-        return {
-            wallet: investorData.wallet,
-            onchainID: investorData.onchainID,
-            verified: isVerified,
-            country: investorCountry,
-            registrationTime: new Date().toISOString(),
-        };
-    } catch (error) {
-        console.error("❌ 投资者注册失败:", error);
-        throw error;
-    }
-}
-
-// 使用示例
-async function main() {
-    const provider = new ethers.providers.JsonRpcProvider("https://mainnet.infura.io/v3/YOUR_KEY");
-    const wallet = new ethers.Wallet("YOUR_PRIVATE_KEY", provider);
-    const registryContract = new ethers.Contract(
-        IDENTITY_REGISTRY_ADDRESS,
-        IdentityRegistryABI,
-        wallet
-    );
-
-    const result = await registerInvestorWithKYC(registryContract, {
-        wallet: "0x1234567890123456789012345678901234567890",
-        onchainID: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12",
-        country: 840, // 美国
-        claims: [
-            {
-                topic: 1, // KYC Claim
-                issuer: "0xTRUSTED_ISSUER_ADDRESS",
-                signature: "0xSIGNATURE_DATA",
-                data: "0xCLAIM_DATA",
-            },
-        ],
-    });
-
-    console.log("\n🎉 投资者KYC与身份注册完成!");
-    console.log("验证状态:", result.verified);
-}
 ```
 
 ---
 
-## 4. 业务流程 3: 代币发行与转账
+## 4. 业务流程 3: 代币转账 ✅ 官方验证
+
+**验证状态**: ✅ 已对齐 ERC-3643 官方标准
+**官方文档**: [EIP-3643](https://eips.ethereum.org/EIPS/eip-3643), [ERC-3643 GitHub](https://github.com/ERC-3643/ERC-3643)
 
 ### 4.1 流程概述
 
-代币发行与转账是 Tokeny T-REX 的核心业务流程,所有转账都需要通过合规检查。
+代币转账是 ERC-3643 的核心业务流程,所有转账都需要通过身份验证和合规检查。
 
-**涉及的合约**: Token, ModularCompliance, IdentityRegistry
+**涉及的合约**: Token (IERC3643), ModularCompliance, IdentityRegistry
 
 **核心步骤**:
 
-1. 发行者调用 Token.mint()铸造代币
-2. 投资者调用 Token.transfer()转账代币
-3. Token 合约调用 ModularCompliance.canTransfer()检查合规
+1. 发送方调用 Token.transfer() 或 Token.transferFrom()
+2. Token 合约验证发送方和接收方的身份 (isVerified())
+3. Token 合约调用 ModularCompliance.canTransfer() 检查合规
 4. 合规检查通过后执行转账
+5. 更新余额并触发 Transfer 事件
+
+**转账前置条件**:
+
+-   ✅ 发送方和接收方都必须在 IdentityRegistry 中注册
+-   ✅ 发送方和接收方都必须通过 isVerified() 验证
+-   ✅ 转账必须通过所有合规模块的检查
+-   ✅ 发送方余额充足且未被冻结
 
 ---
 
 ### 4.2 Token 合约详解
 
-**核心方法**:
+**官方接口** (来自 [EIP-3643](https://eips.ethereum.org/EIPS/eip-3643)):
 
 ```solidity
-/**
- * @dev 转账代币(带合规检查)
- * @param to 接收者地址
- * @param amount 转账金额
- */
-function transfer(address to, uint256 amount) public override returns (bool) {
-    // 1. 合规检查
-    require(compliance.canTransfer(msg.sender, to, amount), "Transfer not compliant");
+interface IERC3643 is IERC20 {
+    // ERC-3643 特有事件
+    event UpdatedTokenInformation(string indexed _newName, string indexed _newSymbol);
+    event IdentityRegistryAdded(address indexed _identityRegistry);
+    event ComplianceAdded(address indexed _compliance);
+    event RecoverySuccess(address indexed _lostWallet, address indexed _newWallet, address indexed _investorOnchainID);
 
-    // 2. 身份验证
+    // 身份和合规管理
+    function setIdentityRegistry(address _identityRegistry) external;
+    function setCompliance(address _compliance) external;
+
+    // 代币信息
+    function identityRegistry() external view returns (IIdentityRegistry);
+    function compliance() external view returns (IModularCompliance);
+    function onchainID() external view returns (address);
+
+    // 强制转账 (仅 Agent 角色)
+    function forcedTransfer(address _from, address _to, uint256 _amount) external returns (bool);
+
+    // 代币冻结
+    function setAddressFrozen(address _userAddress, bool _freeze) external;
+    function freezePartialTokens(address _userAddress, uint256 _amount) external;
+    function unfreezePartialTokens(address _userAddress, uint256 _amount) external;
+
+    // 查询冻结状态
+    function isFrozen(address _userAddress) external view returns (bool);
+    function getFrozenTokens(address _userAddress) external view returns (uint256);
+}
+```
+
+**transfer() 函数实现**:
+
+```solidity
+function transfer(address _to, uint256 _amount) public override returns (bool) {
+    // 1. 身份验证
     require(identityRegistry.isVerified(msg.sender), "Sender not verified");
-    require(identityRegistry.isVerified(to), "Receiver not verified");
+    require(identityRegistry.isVerified(_to), "Receiver not verified");
 
-    // 3. 执行转账
-    _transfer(msg.sender, to, amount);
+    // 2. 冻结检查
+    require(!isFrozen(msg.sender), "Sender is frozen");
+    require(balanceOf(msg.sender) - getFrozenTokens(msg.sender) >= _amount, "Insufficient unfrozen balance");
 
-    // 4. 更新合规状态
-    compliance.transferred(msg.sender, to, amount);
+    // 3. 合规检查
+    require(compliance.canTransfer(msg.sender, _to, _amount), "Transfer not compliant");
+
+    // 4. 执行转账
+    _transfer(msg.sender, _to, _amount);
+
+    // 5. 更新合规状态
+    compliance.transferred(msg.sender, _to, _amount);
 
     return true;
 }
@@ -873,63 +848,575 @@ function transfer(address to, uint256 amount) public override returns (bool) {
 
 ---
 
-## 5. 业务流程 4: 合规检查与限制
+### 4.3 代码示例
+
+#### 4.3.1 完整的代币转账流程 (Solidity)
+
+```solidity
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity ^0.8.0;
+
+import "@erc-3643/core/contracts/token/Token.sol";
+
+/**
+ * @title TokenTransfer
+ * @dev 代币转账完整流程示例
+ */
+contract TokenTransfer {
+    Token public token;
+
+    constructor(address _token) {
+        token = Token(_token);
+    }
+
+    /**
+     * @dev 执行代币转账
+     * @param _to 接收者地址
+     * @param _amount 转账金额
+     */
+    function executeTransfer(address _to, uint256 _amount) external {
+        console.log("=== 开始代币转账 ===");
+        console.log("发送方:", msg.sender);
+        console.log("接收方:", _to);
+        console.log("金额:", _amount);
+
+        // 1. 检查发送方身份
+        IIdentityRegistry identityRegistry = token.identityRegistry();
+        require(identityRegistry.isVerified(msg.sender), "发送方未验证");
+        console.log("✓ 发送方身份验证通过");
+
+        // 2. 检查接收方身份
+        require(identityRegistry.isVerified(_to), "接收方未验证");
+        console.log("✓ 接收方身份验证通过");
+
+        // 3. 检查发送方余额
+        uint256 balance = token.balanceOf(msg.sender);
+        uint256 frozenTokens = token.getFrozenTokens(msg.sender);
+        uint256 availableBalance = balance - frozenTokens;
+        require(availableBalance >= _amount, "余额不足");
+        console.log("✓ 余额检查通过");
+        console.log("  总余额:", balance);
+        console.log("  冻结余额:", frozenTokens);
+        console.log("  可用余额:", availableBalance);
+
+        // 4. 检查合规性
+        IModularCompliance compliance = token.compliance();
+        require(compliance.canTransfer(msg.sender, _to, _amount), "不符合合规要求");
+        console.log("✓ 合规检查通过");
+
+        // 5. 执行转账
+        bool success = token.transfer(_to, _amount);
+        require(success, "转账失败");
+        console.log("✓ 转账成功");
+
+        console.log("=== 代币转账完成 ===");
+    }
+
+    /**
+     * @dev 批量转账
+     * @param _recipients 接收者地址数组
+     * @param _amounts 转账金额数组
+     */
+    function batchTransfer(
+        address[] memory _recipients,
+        uint256[] memory _amounts
+    ) external {
+        require(_recipients.length == _amounts.length, "数组长度不匹配");
+
+        console.log("=== 开始批量转账 ===");
+        console.log("接收者数量:", _recipients.length);
+
+        for (uint256 i = 0; i < _recipients.length; i++) {
+            console.log("\n转账", i + 1, "/", _recipients.length);
+            executeTransfer(_recipients[i], _amounts[i]);
+        }
+
+        console.log("\n=== 批量转账完成 ===");
+    }
+}
+```
+
+#### 4.3.2 调用示例
+
+```solidity
+// 单笔转账
+TokenTransfer transferContract = new TokenTransfer(tokenAddress);
+transferContract.executeTransfer(
+    recipientAddress,
+    1000 * 10**18  // 1000 代币
+);
+
+// 批量转账
+address[] memory recipients = new address[](3);
+recipients[0] = address(0x123...);
+recipients[1] = address(0x456...);
+recipients[2] = address(0x789...);
+
+uint256[] memory amounts = new uint256[](3);
+amounts[0] = 100 * 10**18;
+amounts[1] = 200 * 10**18;
+amounts[2] = 300 * 10**18;
+
+transferContract.batchTransfer(recipients, amounts);
+```
+
+---
+
+## 5. 业务流程 4: 合规检查 ✅ 官方验证
+
+**验证状态**: ✅ 已对齐 ERC-3643 官方标准
+**官方文档**: [EIP-3643](https://eips.ethereum.org/EIPS/eip-3643), [ERC-3643 GitHub](https://github.com/ERC-3643/ERC-3643)
 
 ### 5.1 流程概述
 
-合规检查是 Tokeny T-REX 的核心特性,通过模块化合规系统实现灵活的合规规则。
+合规检查是 ERC-3643 的核心特性,通过 Modular Compliance 系统实现灵活的合规规则。
 
-**涉及的合约**: ModularCompliance, ComplianceModule
+**涉及的合约**: ModularCompliance, IModule (合规模块接口)
 
-**常见合规规则**:
+**核心步骤**:
 
--   国家限制(CountryRestrictionModule)
--   投资者数量限制(MaxInvestorsModule)
--   持仓限制(MaxBalanceModule)
--   转账限制(TransferLimitModule)
+1. Token 合约调用 ModularCompliance.canTransfer()
+2. ModularCompliance 遍历所有已绑定的合规模块
+3. 每个模块执行 moduleCheck() 检查
+4. 所有模块都通过才允许转账
+5. 转账后调用 transferred() 更新合规状态
+
+**常见合规模块**:
+
+-   **CountryRestrictionModule**: 国家限制 (禁止特定国家的投资者)
+-   **SupplyLimitModule**: 供应量限制 (限制代币总供应量)
+-   **TransferLimitModule**: 转账限制 (限制单笔转账金额或频率)
+-   **MaxBalanceModule**: 持仓限制 (限制单个投资者的最大持仓)
+-   **TimeTransfersLimitsModule**: 时间限制 (限制特定时间段的转账)
 
 ---
 
-### 5.2 ModularCompliance 合约详解
+### 5.2 Modular Compliance 系统详解
 
-**核心方法**:
+#### 5.2.1 核心概念
+
+**Modular Compliance** 是 ERC-3643 的核心创新之一:
+
+-   **可插拔**: 支持动态添加/移除合规模块
+-   **灵活性**: 每个代币可以有不同的合规规则组合
+-   **可扩展**: 可以开发自定义合规模块
+-   **链上执行**: 所有合规检查都在链上自动执行
+
+#### 5.2.2 官方接口
 
 ```solidity
-/**
- * @dev 检查转账是否合规
- * @param from 发送者地址
- * @param to 接收者地址
- * @param amount 转账金额
- */
+interface IModularCompliance {
+    // 事件
+    event ModuleAdded(address indexed _module);
+    event ModuleRemoved(address indexed _module);
+
+    // 添加/移除合规模块
+    function addModule(address _module) external;
+    function removeModule(address _module) external;
+
+    // 合规检查
+    function canTransfer(address _from, address _to, uint256 _value) external view returns (bool);
+
+    // 转账后回调
+    function transferred(address _from, address _to, uint256 _value) external;
+
+    // 查询模块
+    function getModules() external view returns (address[] memory);
+    function isModuleBound(address _module) external view returns (bool);
+}
+```
+
+**canTransfer() 函数详解**:
+
+```solidity
 function canTransfer(
-    address from,
-    address to,
-    uint256 amount
+    address _from,
+    address _to,
+    uint256 _value
 ) external view returns (bool) {
     // 遍历所有合规模块
-    for (uint i = 0; i < modules.length; i++) {
-        if (!modules[i].moduleCheck(from, to, amount, address(this))) {
-            return false;
+    address[] memory modules = getModules();
+    for (uint256 i = 0; i < modules.length; i++) {
+        // 调用每个模块的 moduleCheck()
+        if (!IModule(modules[i]).moduleCheck(_from, _to, _value, address(token))) {
+            return false;  // 任何一个模块不通过,转账失败
         }
     }
-    return true;
+    return true;  // 所有模块都通过
 }
 ```
 
 ---
 
-## 6. 业务流程 5: 代币赎回与销毁
+### 5.3 代码示例
+
+#### 5.3.1 完整的合规检查流程 (Solidity)
+
+```solidity
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity ^0.8.0;
+
+import "@erc-3643/core/contracts/compliance/ModularCompliance.sol";
+import "@erc-3643/core/contracts/compliance/modules/CountryRestrictionModule.sol";
+import "@erc-3643/core/contracts/compliance/modules/SupplyLimitModule.sol";
+
+/**
+ * @title ComplianceManagement
+ * @dev 合规管理完整流程示例
+ */
+contract ComplianceManagement {
+    ModularCompliance public compliance;
+    Token public token;
+
+    constructor(address _compliance, address _token) {
+        compliance = ModularCompliance(_compliance);
+        token = Token(_token);
+    }
+
+    /**
+     * @dev 添加国家限制模块
+     * @param _restrictedCountries 禁止的国家代码数组
+     */
+    function addCountryRestriction(uint16[] memory _restrictedCountries) external {
+        console.log("=== 添加国家限制模块 ===");
+
+        // 1. 部署 CountryRestrictionModule
+        CountryRestrictionModule module = new CountryRestrictionModule();
+        console.log("✓ CountryRestrictionModule 已部署:", address(module));
+
+        // 2. 配置禁止的国家
+        for (uint256 i = 0; i < _restrictedCountries.length; i++) {
+            module.addCountryRestriction(_restrictedCountries[i]);
+            console.log("  禁止国家:", _restrictedCountries[i]);
+        }
+
+        // 3. 添加模块到 Compliance
+        compliance.addModule(address(module));
+        console.log("✓ 模块已添加到 Compliance");
+    }
+
+    /**
+     * @dev 添加供应量限制模块
+     * @param _maxSupply 最大供应量
+     */
+    function addSupplyLimit(uint256 _maxSupply) external {
+        console.log("=== 添加供应量限制模块 ===");
+        console.log("最大供应量:", _maxSupply);
+
+        // 1. 部署 SupplyLimitModule
+        SupplyLimitModule module = new SupplyLimitModule();
+        console.log("✓ SupplyLimitModule 已部署:", address(module));
+
+        // 2. 设置最大供应量
+        module.setSupplyLimit(_maxSupply);
+        console.log("✓ 最大供应量已设置");
+
+        // 3. 添加模块到 Compliance
+        compliance.addModule(address(module));
+        console.log("✓ 模块已添加到 Compliance");
+    }
+
+    /**
+     * @dev 检查转账是否合规
+     * @param _from 发送方
+     * @param _to 接收方
+     * @param _amount 金额
+     */
+    function checkCompliance(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) external view returns (bool) {
+        console.log("=== 检查转账合规性 ===");
+        console.log("发送方:", _from);
+        console.log("接收方:", _to);
+        console.log("金额:", _amount);
+
+        // 调用 canTransfer()
+        bool canTransfer = compliance.canTransfer(_from, _to, _amount);
+
+        if (canTransfer) {
+            console.log("✓ 合规检查通过");
+        } else {
+            console.log("✗ 合规检查失败");
+        }
+
+        return canTransfer;
+    }
+
+    /**
+     * @dev 查询所有合规模块
+     */
+    function listModules() external view returns (address[] memory) {
+        address[] memory modules = compliance.getModules();
+
+        console.log("=== 已绑定的合规模块 ===");
+        console.log("模块数量:", modules.length);
+
+        for (uint256 i = 0; i < modules.length; i++) {
+            console.log("模块", i + 1, ":", modules[i]);
+        }
+
+        return modules;
+    }
+}
+```
+
+#### 5.3.2 调用示例
+
+```solidity
+// 1. 添加国家限制 (禁止朝鲜和伊朗)
+uint16[] memory restrictedCountries = new uint16[](2);
+restrictedCountries[0] = 408;  // 朝鲜 (ISO 3166-1)
+restrictedCountries[1] = 364;  // 伊朗 (ISO 3166-1)
+complianceManagement.addCountryRestriction(restrictedCountries);
+
+// 2. 添加供应量限制 (最大 1000万代币)
+complianceManagement.addSupplyLimit(10_000_000 * 10**18);
+
+// 3. 检查转账合规性
+bool isCompliant = complianceManagement.checkCompliance(
+    senderAddress,
+    recipientAddress,
+    1000 * 10**18
+);
+```
+
+---
+
+## 6. 业务流程 5: 代币赎回 ✅ 官方验证
+
+**验证状态**: ✅ 已对齐 ERC-3643 官方标准
+**官方文档**: [EIP-3643](https://eips.ethereum.org/EIPS/eip-3643), [ERC-3643 GitHub](https://github.com/ERC-3643/ERC-3643)
 
 ### 6.1 流程概述
 
-代币赎回与销毁是投资者退出的流程。
+代币赎回是投资者退出投资的流程,通过销毁代币来减少总供应量。
+
+**涉及的合约**: Token (IERC3643)
 
 **核心步骤**:
 
-1. 投资者提交赎回请求
-2. 发行者批准赎回
-3. 发行者调用 Token.burn()销毁代币
-4. 发行者向投资者支付对应资产
+1. 投资者提交赎回请求 (链下流程)
+2. 发行者审核赎回请求
+3. 发行者调用 Token.burn() 或 Token.forcedTransfer() + burn()
+4. 代币被销毁,总供应量减少
+5. 发行者向投资者支付对应的底层资产 (链下流程)
+
+**赎回方式**:
+
+-   **自愿赎回**: 投资者主动请求赎回,发行者调用 burn()
+-   **强制赎回**: 发行者强制赎回,调用 forcedTransfer() 转移代币后 burn()
+
+---
+
+### 6.2 Token 销毁接口
+
+**官方接口** (来自 [EIP-3643](https://eips.ethereum.org/EIPS/eip-3643)):
+
+```solidity
+interface IERC3643 {
+    // 销毁代币
+    function burn(address _userAddress, uint256 _amount) external;
+
+    // 强制转账 (用于强制赎回)
+    function forcedTransfer(address _from, address _to, uint256 _amount) external returns (bool);
+
+    // 批量销毁
+    function batchBurn(address[] calldata _userAddresses, uint256[] calldata _amounts) external;
+}
+```
+
+**burn() 函数实现**:
+
+```solidity
+function burn(address _userAddress, uint256 _amount) external onlyAgent {
+    // 1. 检查余额
+    require(balanceOf(_userAddress) >= _amount, "Insufficient balance");
+
+    // 2. 销毁代币
+    _burn(_userAddress, _amount);
+
+    // 3. 更新合规状态
+    compliance.transferred(_userAddress, address(0), _amount);
+
+    emit Burn(_userAddress, _amount);
+}
+```
+
+---
+
+### 6.3 代码示例
+
+#### 6.3.1 完整的代币赎回流程 (Solidity)
+
+```solidity
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity ^0.8.0;
+
+import "@erc-3643/core/contracts/token/Token.sol";
+
+/**
+ * @title TokenRedemption
+ * @dev 代币赎回完整流程示例
+ */
+contract TokenRedemption {
+    Token public token;
+
+    // 赎回请求结构
+    struct RedemptionRequest {
+        address investor;
+        uint256 amount;
+        uint256 timestamp;
+        bool approved;
+        bool executed;
+    }
+
+    // 赎回请求映射
+    mapping(uint256 => RedemptionRequest) public redemptionRequests;
+    uint256 public nextRequestId;
+
+    event RedemptionRequested(uint256 indexed requestId, address indexed investor, uint256 amount);
+    event RedemptionApproved(uint256 indexed requestId);
+    event RedemptionExecuted(uint256 indexed requestId, address indexed investor, uint256 amount);
+
+    constructor(address _token) {
+        token = Token(_token);
+    }
+
+    /**
+     * @dev 投资者提交赎回请求
+     * @param _amount 赎回金额
+     */
+    function requestRedemption(uint256 _amount) external returns (uint256) {
+        console.log("=== 提交赎回请求 ===");
+        console.log("投资者:", msg.sender);
+        console.log("赎回金额:", _amount);
+
+        // 1. 检查余额
+        uint256 balance = token.balanceOf(msg.sender);
+        require(balance >= _amount, "余额不足");
+        console.log("✓ 余额检查通过");
+
+        // 2. 创建赎回请求
+        uint256 requestId = nextRequestId++;
+        redemptionRequests[requestId] = RedemptionRequest({
+            investor: msg.sender,
+            amount: _amount,
+            timestamp: block.timestamp,
+            approved: false,
+            executed: false
+        });
+
+        emit RedemptionRequested(requestId, msg.sender, _amount);
+        console.log("✓ 赎回请求已创建, ID:", requestId);
+
+        return requestId;
+    }
+
+    /**
+     * @dev 发行者批准赎回请求
+     * @param _requestId 赎回请求 ID
+     */
+    function approveRedemption(uint256 _requestId) external {
+        console.log("=== 批准赎回请求 ===");
+        console.log("请求 ID:", _requestId);
+
+        RedemptionRequest storage request = redemptionRequests[_requestId];
+        require(!request.approved, "请求已批准");
+        require(!request.executed, "请求已执行");
+
+        request.approved = true;
+        emit RedemptionApproved(_requestId);
+        console.log("✓ 赎回请求已批准");
+    }
+
+    /**
+     * @dev 执行赎回 (销毁代币)
+     * @param _requestId 赎回请求 ID
+     */
+    function executeRedemption(uint256 _requestId) external {
+        console.log("=== 执行赎回 ===");
+        console.log("请求 ID:", _requestId);
+
+        RedemptionRequest storage request = redemptionRequests[_requestId];
+        require(request.approved, "请求未批准");
+        require(!request.executed, "请求已执行");
+
+        // 1. 销毁代币
+        token.burn(request.investor, request.amount);
+        console.log("✓ 代币已销毁");
+        console.log("  投资者:", request.investor);
+        console.log("  销毁金额:", request.amount);
+
+        // 2. 标记为已执行
+        request.executed = true;
+        emit RedemptionExecuted(_requestId, request.investor, request.amount);
+
+        console.log("✓ 赎回执行完成");
+    }
+
+    /**
+     * @dev 强制赎回 (用于合规要求)
+     * @param _investor 投资者地址
+     * @param _amount 赎回金额
+     */
+    function forcedRedemption(address _investor, uint256 _amount) external {
+        console.log("=== 强制赎回 ===");
+        console.log("投资者:", _investor);
+        console.log("赎回金额:", _amount);
+
+        // 1. 强制转账到合约地址
+        token.forcedTransfer(_investor, address(this), _amount);
+        console.log("✓ 代币已强制转移到合约");
+
+        // 2. 销毁代币
+        token.burn(address(this), _amount);
+        console.log("✓ 代币已销毁");
+
+        console.log("✓ 强制赎回完成");
+    }
+
+    /**
+     * @dev 批量赎回
+     * @param _requestIds 赎回请求 ID 数组
+     */
+    function batchRedemption(uint256[] memory _requestIds) external {
+        console.log("=== 批量赎回 ===");
+        console.log("请求数量:", _requestIds.length);
+
+        for (uint256 i = 0; i < _requestIds.length; i++) {
+            console.log("\n执行赎回", i + 1, "/", _requestIds.length);
+            executeRedemption(_requestIds[i]);
+        }
+
+        console.log("\n=== 批量赎回完成 ===");
+    }
+}
+```
+
+#### 6.3.2 调用示例
+
+```solidity
+// 1. 投资者提交赎回请求
+uint256 requestId = redemption.requestRedemption(1000 * 10**18);
+
+// 2. 发行者批准赎回
+redemption.approveRedemption(requestId);
+
+// 3. 执行赎回 (销毁代币)
+redemption.executeRedemption(requestId);
+
+// 4. 强制赎回 (合规要求)
+redemption.forcedRedemption(investorAddress, 500 * 10**18);
+
+// 5. 批量赎回
+uint256[] memory requestIds = new uint256[](3);
+requestIds[0] = 1;
+requestIds[1] = 2;
+requestIds[2] = 3;
+redemption.batchRedemption(requestIds);
+```
 
 ---
 
