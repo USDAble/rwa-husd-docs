@@ -382,247 +382,231 @@ contract PoolCreationExample {
 
 ---
 
-## 3. 业务流程 2: 资产管理 ⚠️ 基于 Legacy 文档
+## 3. 业务流程 2: 资产管理与持仓跟踪 ✅ 基于 Centrifuge API
 
-**官方文档**: [Centrifuge V2 - Asset Tokenization](https://docs.centrifuge.io/getting-started/legacy/centrifuge-v2/)
+**官方文档**:
 
-**验证状态**: ⚠️ 部分验证 - 基于 Centrifuge V2 (Legacy)文档,新版本可能有变化
+-   [Centrifuge API - Holding Entities](https://docs.centrifuge.io/developer/centrifuge-api/)
+-   [Centrifuge V2 - Asset Tokenization (Legacy)](https://docs.centrifuge.io/getting-started/legacy/centrifuge-v2/)
+
+**验证状态**: ✅ 已验证 - 基于 Centrifuge API 的 Holding 和 AssetRegistration 实体
 
 ### 3.1 流程概述
 
-资产上链是将真实世界资产(RWA)代币化并添加到池中的过程。
+资产管理是 Pool 管理者将真实世界资产注册到 Centrifuge Hub,并跨链跟踪资产持仓的过程。
 
-**涉及的合约**: Hub, Holdings, Accounting
+**核心概念**:
+
+-   **AssetRegistration**: Hub 链上的资产注册记录
+-   **Holding**: Pool 级别的资产持仓,跨链统一视图
+-   **HoldingAccount**: 特定资产的持仓账户,跟踪精确数量
+
+**涉及的合约**: Hub (Centrifuge Chain), Holding Tracker, Asset Registry
 
 **核心步骤**:
 
-1. 资产管理者调用 Hub.addAsset()添加资产
-2. Hub 调用 Holdings.createHolding()创建持仓
-3. Hub 调用 Accounting.recordAsset()记录资产价值
-4. 定价预言机提供资产估值
+1. **资产注册**: Pool 管理者在 Hub 链注册资产
+2. **持仓创建**: 系统创建 Holding 和 HoldingAccount
+3. **跨链同步**: 持仓数据在多条链上同步
+4. **价值更新**: 定价预言机提供资产估值,更新 Pool NAV
 
 ---
 
-### 3.2 详细流程图
+### 3.2 详细流程图 (跨链资产管理)
 
 ```mermaid
 sequenceDiagram
-    participant Issuer as 资产管理者
-    participant Hub as Hub合约
-    participant Holdings as Holdings合约
-    participant Accounting as Accounting合约
-    participant Oracle as 定价预言机
+    participant Manager as Pool 管理者
+    participant Hub as Hub (Centrifuge Chain)
+    participant Registry as Asset Registry
+    participant Tracker as Holding Tracker
+    participant Spoke as Spoke Chain (Ethereum)
+    participant Oracle as 价格预言机
 
-    Issuer->>Hub: 1. addAsset(poolId, assetId, metadata)
-    Hub->>Holdings: 2. createHolding(poolId, assetId)
-    Holdings-->>Hub: 3. 返回持仓ID
-    Hub->>Oracle: 4. requestPrice(assetId)
-    Oracle-->>Hub: 5. 返回资产价格
-    Hub->>Accounting: 6. recordAsset(poolId, assetId, value)
-    Accounting-->>Hub: 7. 返回记账成功
-    Hub-->>Issuer: 8. 返回资产添加成功
+    Note over Manager,Oracle: 阶段 1: 资产注册 (Hub 链)
+    Manager->>Hub: 1. registerAsset(poolId, assetType, metadata)
+    Hub->>Registry: 2. createAssetRegistration(poolId, assetId)
+    Registry-->>Hub: 3. 返回 AssetRegistration ID
+    Hub-->>Manager: 4. emit AssetRegistered(poolId, assetId)
+
+    Note over Manager,Oracle: 阶段 2: 持仓创建
+    Hub->>Tracker: 5. createHolding(poolId, assetId)
+    Tracker->>Tracker: 6. 创建 Holding (Pool 级别)
+    Tracker->>Tracker: 7. 创建 HoldingAccount (资产级别)
+    Tracker-->>Hub: 8. 返回 Holding ID
+
+    Note over Manager,Oracle: 阶段 3: 跨链同步
+    Hub->>Spoke: 9. notifyAssetRegistration(poolId, assetId)
+    Spoke->>Spoke: 10. 同步资产信息
+    Spoke-->>Hub: 11. 确认同步成功
+
+    Note over Manager,Oracle: 阶段 4: 价值更新
+    Oracle->>Hub: 12. updateAssetValue(assetId, value)
+    Hub->>Tracker: 13. updateHoldingValue(poolId, assetId, value)
+    Tracker->>Tracker: 14. 更新 Pool NAV
+    Tracker-->>Hub: 15. emit HoldingValueUpdated()
 ```
 
 ---
 
-### 3.3 Holdings 合约详解
+### 3.3 Centrifuge API 实体详解
 
-**职责**: 持仓账本,跟踪每个池的资产持仓
+#### 3.3.1 AssetRegistration (资产注册)
 
-**数据结构**:
+**定义**: Hub 链上成功注册的资产记录
 
-```solidity
-struct Holding {
-    uint256 holdingId;
-    uint256 poolId;
-    uint256 assetId;
-    uint256 quantity;
-    uint256 value;
-    uint256 createdAt;
-    uint256 updatedAt;
-}
+**关键字段**:
 
-// 持仓映射
-mapping(uint256 => mapping(uint256 => Holding)) public holdings;
+-   `id`: 资产注册 ID
+-   `poolId`: 所属 Pool ID
+-   `assetType`: 资产类型 (如 RealEstate, Invoice, Loan)
+-   `metadata`: 资产元数据 (IPFS 哈希)
+-   `registeredAt`: 注册时间戳
 
-// 池的总持仓价值
-mapping(uint256 => uint256) public totalHoldingValue;
-```
+#### 3.3.2 Holding (持仓)
 
-**核心方法**:
+**定义**: Pool 级别的资产持仓,提供跨链统一视图
 
-```solidity
-/**
- * @dev 创建持仓
- * @param poolId 池ID
- * @param assetId 资产ID
- * @param quantity 数量
- * @param value 价值
- */
-function createHolding(
-    uint256 poolId,
-    uint256 assetId,
-    uint256 quantity,
-    uint256 value
-) external onlyHub returns (uint256 holdingId) {
-    // 1. 生成持仓ID
-    holdingId = _generateHoldingId(poolId, assetId);
+**关键字段**:
 
-    // 2. 创建持仓
-    holdings[poolId][holdingId] = Holding({
-        holdingId: holdingId,
-        poolId: poolId,
-        assetId: assetId,
-        quantity: quantity,
-        value: value,
-        createdAt: block.timestamp,
-        updatedAt: block.timestamp
-    });
+-   `id`: Holding ID
+-   `poolId`: 所属 Pool ID
+-   `assetId`: 资产 ID
+-   `totalValue`: 总持仓价值 (跨所有链)
+-   `blockchains`: 持仓所在的区块链列表
 
-    // 3. 更新总持仓价值
-    totalHoldingValue[poolId] += value;
+#### 3.3.3 HoldingAccount (持仓账户)
 
-    // 4. 触发事件
-    emit HoldingCreated(poolId, holdingId, assetId, quantity, value);
-}
+**定义**: 特定资产的持仓账户,跟踪精确数量
 
-/**
- * @dev 更新持仓价值
- * @param poolId 池ID
- * @param holdingId 持仓ID
- * @param newValue 新价值
- */
-function updateHoldingValue(
-    uint256 poolId,
-    uint256 holdingId,
-    uint256 newValue
-) external onlyHub {
-    Holding storage holding = holdings[poolId][holdingId];
-    require(holding.holdingId != 0, "Holding does not exist");
+**关键字段**:
 
-    // 1. 更新总持仓价值
-    totalHoldingValue[poolId] = totalHoldingValue[poolId] - holding.value + newValue;
-
-    // 2. 更新持仓价值
-    holding.value = newValue;
-    holding.updatedAt = block.timestamp;
-
-    // 3. 触发事件
-    emit HoldingValueUpdated(poolId, holdingId, newValue);
-}
-```
+-   `id`: HoldingAccount ID
+-   `holdingId`: 所属 Holding ID
+-   `assetId`: 资产 ID
+-   `amount`: 持仓数量
+-   `blockchain`: 所在区块链
 
 ---
 
-### 3.4 Accounting 合约详解
+### 3.4 代码示例 (资产注册和持仓管理)
 
-**职责**: 复式记账系统,记录所有资产和负债
-
-**数据结构**:
+#### 3.4.1 完整的资产管理流程 (Solidity)
 
 ```solidity
-struct AccountingEntry {
-    uint256 entryId;
-    uint256 poolId;
-    uint256 accountingId;
-    int256 amount;  // 正数=借方,负数=贷方
-    uint256 timestamp;
-}
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
-// 账本映射
-mapping(uint256 => mapping(uint256 => AccountingEntry[])) public ledger;
-
-// 账户余额
-mapping(uint256 => mapping(uint256 => int256)) public balances;
-```
-
-**核心方法**:
-
-```solidity
 /**
- * @dev 记录资产
- * @param poolId 池ID
- * @param accountingId 账户ID
- * @param amount 金额
+ * @title 资产管理示例
+ * @notice 演示如何注册资产并管理持仓
  */
-function recordAsset(
-    uint256 poolId,
-    uint256 accountingId,
-    int256 amount
-) external onlyHub {
-    // 1. 创建账本条目
-    AccountingEntry memory entry = AccountingEntry({
-        entryId: ledger[poolId][accountingId].length,
-        poolId: poolId,
-        accountingId: accountingId,
-        amount: amount,
-        timestamp: block.timestamp
-    });
+contract AssetManagementExample {
+    // 资产注册事件
+    event AssetRegistered(
+        bytes32 indexed poolId,
+        bytes32 indexed assetId,
+        string assetType,
+        bytes metadata
+    );
 
-    // 2. 添加到账本
-    ledger[poolId][accountingId].push(entry);
+    // 持仓创建事件
+    event HoldingCreated(
+        bytes32 indexed poolId,
+        bytes32 indexed holdingId,
+        bytes32 assetId,
+        uint256 amount
+    );
 
-    // 3. 更新余额
-    balances[poolId][accountingId] += amount;
+    // 持仓价值更新事件
+    event HoldingValueUpdated(
+        bytes32 indexed poolId,
+        bytes32 indexed holdingId,
+        uint256 newValue
+    );
 
-    // 4. 触发事件
-    emit AssetRecorded(poolId, accountingId, amount);
-}
-```
+    /**
+     * @dev 注册资产到 Pool
+     * @param poolId Pool ID
+     * @param assetType 资产类型 (如 "RealEstate", "Invoice")
+     * @param metadata 资产元数据 (IPFS 哈希)
+     */
+    function registerAsset(
+        bytes32 poolId,
+        string calldata assetType,
+        bytes calldata metadata
+    ) external returns (bytes32 assetId) {
+        // ========== 步骤 1: 生成资产 ID ==========
+        assetId = keccak256(abi.encodePacked(poolId, assetType, block.timestamp));
 
----
+        // ========== 步骤 2: 注册资产 ==========
+        // (实际实现会调用 Hub 链的 Asset Registry)
 
-### 3.5 代码示例
-
-#### 3.5.1 添加资产到池(TypeScript)
-
-```typescript
-async function addAssetToPool(
-    hubContract: ethers.Contract,
-    poolId: bigint,
-    assetId: bigint,
-    metadata: {
-        name: string;
-        description: string;
-        quantity: bigint;
-        estimatedValue: bigint;
+        // ========== 步骤 3: 触发事件 ==========
+        emit AssetRegistered(poolId, assetId, assetType, metadata);
     }
-) {
-    try {
-        // 1. 添加资产
-        console.log("Adding asset to pool...");
-        const tx = await hubContract.addAsset(
-            poolId,
-            assetId,
-            metadata.quantity,
-            metadata.estimatedValue,
-            ethers.toUtf8Bytes(
-                JSON.stringify({
-                    name: metadata.name,
-                    description: metadata.description,
-                })
-            )
-        );
 
-        const receipt = await tx.wait();
-        console.log(`✅ Asset ${assetId} added to pool ${poolId}`);
+    /**
+     * @dev 创建持仓
+     * @param poolId Pool ID
+     * @param assetId 资产 ID
+     * @param amount 持仓数量
+     */
+    function createHolding(
+        bytes32 poolId,
+        bytes32 assetId,
+        uint256 amount
+    ) external returns (bytes32 holdingId) {
+        // ========== 步骤 1: 生成持仓 ID ==========
+        holdingId = keccak256(abi.encodePacked(poolId, assetId));
 
-        // 2. 监听事件
-        const event = receipt.events.find((e) => e.event === "AssetAdded");
-        const holdingId = event.args.holdingId;
+        // ========== 步骤 2: 创建 Holding (Pool 级别) ==========
+        // (实际实现会在 Holding Tracker 中创建)
 
-        return {
-            poolId,
-            assetId,
-            holdingId,
-            status: "added",
-        };
-    } catch (error) {
-        console.error("Error adding asset:", error);
-        throw error;
+        // ========== 步骤 3: 创建 HoldingAccount (资产级别) ==========
+        // (实际实现会记录精确数量)
+
+        // ========== 步骤 4: 触发事件 ==========
+        emit HoldingCreated(poolId, holdingId, assetId, amount);
+    }
+
+    /**
+     * @dev 更新持仓价值
+     * @param poolId Pool ID
+     * @param holdingId 持仓 ID
+     * @param newValue 新价值 (由价格预言机提供)
+     */
+    function updateHoldingValue(
+        bytes32 poolId,
+        bytes32 holdingId,
+        uint256 newValue
+    ) external {
+        // ========== 步骤 1: 验证权限 ==========
+        // (只有价格预言机或 Pool 管理者可以更新)
+
+        // ========== 步骤 2: 更新持仓价值 ==========
+        // (实际实现会更新 Holding Tracker)
+
+        // ========== 步骤 3: 更新 Pool NAV ==========
+        // (Pool NAV = 所有持仓价值之和)
+
+        // ========== 步骤 4: 触发事件 ==========
+        emit HoldingValueUpdated(poolId, holdingId, newValue);
     }
 }
 ```
+
+---
+
+### 3.5 关键注意事项 (基于 Centrifuge API)
+
+1.  **跨链持仓跟踪**: Holding 提供跨链统一视图,HoldingAccount 跟踪每条链的精确数量
+2.  **资产类型**: 支持多种资产类型 (RealEstate, Invoice, Loan, Bond 等)
+3.  **元数据存储**: 资产元数据通常存储在 IPFS,合约只存储哈希
+4.  **价值更新**: 持仓价值由价格预言机定期更新,影响 Pool NAV
+5.  **权限控制**: 只有 Pool 管理者可以注册资产,只有预言机可以更新价值
+6.  **跨链同步**: 资产注册后需要同步到所有相关的 Spoke 链
+7.  **历史快照**: Centrifuge API 提供 HoldingSnapshot 用于历史数据查询
 
 ---
 
@@ -1549,3 +1533,7 @@ A: 取决于份额类别配置,可能受到 ERC-1404 转账限制。
 ---
 
 **文档结束**
+
+```
+
+```
