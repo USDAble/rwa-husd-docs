@@ -12,8 +12,8 @@
 
 1. [InvestaX 概述](#1-investax概述)
 2. [业务流程 1: 资产代币化](#2-业务流程1-资产代币化)
-3. [业务流程 2: 投资者KYC与合规](#3-业务流程2-投资者kyc与合规)
-4. [业务流程 3: Security Token发行](#4-业务流程3-security-token发行)
+3. [业务流程 2: 投资者 KYC 与合规](#3-业务流程2-投资者kyc与合规)
+4. [业务流程 3: Security Token 发行](#4-业务流程3-security-token发行)
 5. [业务流程 4: 二级市场交易](#5-业务流程4-二级市场交易)
 6. [业务流程 5: 资产管理与分红](#6-业务流程5-资产管理与分红)
 
@@ -24,6 +24,7 @@
 ### 1.1 核心定位
 
 **官方定义** (来自 InvestaX 官方网站):
+
 > "Institutional-grade platform for real-world asset (RWA) token issuance, distribution, and trading."
 
 **InvestaX 是新加坡金融管理局 (MAS) 许可的机构级代币化 SaaS 平台**,专注于 RWA 代币发行、分发和交易。
@@ -42,16 +43,19 @@
 InvestaX 采用**SaaS 平台 + 合规基础设施架构**:
 
 #### 1.2.1 代币化层
+
 -   **Smart Contract**: 可定制的智能合约
--   **Token Standard**: 支持多种代币标准 (ERC-20, ERC-1400等)
+-   **Token Standard**: 支持多种代币标准 (ERC-20, ERC-1400 等)
 -   **Asset Registry**: 资产注册表
 
 #### 1.2.2 合规层
+
 -   **KYC/AML**: 集成 ComplyCube 等 KYC 服务商
 -   **Investor Accreditation**: 投资者认证
 -   **Regulatory Compliance**: 符合 MAS 监管要求
 
 #### 1.2.3 交易层
+
 -   **Primary Market**: 一级市场发行
 -   **Secondary Market**: 二级市场交易
 -   **Liquidity Management**: 流动性管理
@@ -61,14 +65,17 @@ InvestaX 采用**SaaS 平台 + 合规基础设施架构**:
 ### 1.3 官方资源
 
 **核心文档**:
+
 -   [InvestaX 官方网站](https://www.investax.io/)
 -   [Tokenization SaaS Platform](https://www.investax.io/tokenization-saas-platform)
 -   [Fund Tokenization Explained](https://www.investax.io/blog/fund-tokenization-explained)
 
 **合作伙伴**:
+
 -   [ComplyCube KYC Integration](https://www.complycube.com/en/complycube-powers-secure-rwa-asset-tokenization-for-investax/)
 
 **行业报告**:
+
 -   [State of Security Tokens 2023 Q4](https://medium.com/security-token-group/platform-and-service-provider-updates-part-3-state-of-security-tokens-2023-q4-c8555cdf005e)
 
 ---
@@ -78,11 +85,13 @@ InvestaX 采用**SaaS 平台 + 合规基础设施架构**:
 **验证方法**: 基于官方网站 + 行业报告
 
 **资源限制**:
+
 -   ⚠️ InvestaX 没有公开的 GitHub 仓库
 -   ⚠️ 智能合约源代码未公开
 -   ✅ 官方网站提供了详细的产品说明
 
 **验证策略**:
+
 1. **核心功能**: 基于官方网站验证 → ⚠️ 基于官方网站
 2. **合规功能**: 基于 MAS 监管要求验证 → ⚠️ 基于 MAS 监管要求
 3. **其他功能**: 基于 ERC-20/ERC-1400 标准验证 → ⚠️ 基于 ERC 标准
@@ -99,6 +108,7 @@ InvestaX 采用**SaaS 平台 + 合规基础设施架构**:
 资产代币化是 InvestaX 的核心功能,支持多种 RWA 类型。
 
 **支持的资产类型**:
+
 -   **Real Estate**: 房地产
 -   **Private Equity**: 私募股权
 -   **Debt Funds**: 债券基金
@@ -113,6 +123,7 @@ InvestaX 采用**SaaS 平台 + 合规基础设施架构**:
 5. 资产托管
 
 **注意事项**:
+
 -   ✅ 符合 MAS 监管要求
 -   ✅ 支持多种资产类型
 -   ✅ 可定制的智能合约
@@ -120,7 +131,7 @@ InvestaX 采用**SaaS 平台 + 合规基础设施架构**:
 
 ---
 
-## 3. 业务流程 2: 投资者KYC与合规
+## 3. 业务流程 2: 投资者 KYC 与合规
 
 **验证状态**: ⚠️ 基于官方网站 + ComplyCube 集成  
 **官方文档**: [ComplyCube Integration](https://www.complycube.com/en/complycube-powers-secure-rwa-asset-tokenization-for-investax/)
@@ -138,6 +149,7 @@ InvestaX 集成 ComplyCube 提供 KYC/AML 服务。
 5. 白名单添加
 
 **注意事项**:
+
 -   ✅ 集成 ComplyCube KYC 服务
 -   ✅ 符合 MAS 监管要求
 -   ✅ 支持投资者认证
@@ -145,9 +157,9 @@ InvestaX 集成 ComplyCube 提供 KYC/AML 服务。
 
 ---
 
-## 4. 业务流程 3: Security Token发行
+## 4. 业务流程 3: Security Token 发行
 
-**验证状态**: ⚠️ 基于官方网站  
+**验证状态**: ⚠️ 基于官方网站 + ERC-20 标准
 **官方文档**: [Tokenization SaaS Platform](https://www.investax.io/tokenization-saas-platform)
 
 ### 4.1 流程概述
@@ -162,11 +174,109 @@ Security Token 发行通过 InvestaX SaaS 平台实现。
 4. 开启认购
 5. 代币分发
 
+### 4.2 核心合约示例 (基于 ERC-20 标准推断)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+/**
+ * @title InvestaXSecurityToken
+ * @notice Security Token for InvestaX Platform
+ * @dev Based on ERC-20 standard with compliance layer
+ */
+contract InvestaXSecurityToken is ERC20, Ownable {
+    // Asset details
+    string public assetType; // "Real Estate", "Private Equity", etc.
+    uint256 public assetValue;
+    string public assetLocation;
+
+    // Compliance
+    mapping(address => bool) public whitelist;
+    mapping(address => bool) public accreditedInvestors;
+
+    // Events
+    event InvestorWhitelisted(address indexed investor, uint256 timestamp);
+    event InvestorAccredited(address indexed investor, uint256 timestamp);
+
+    /**
+     * @notice Constructor
+     * @param _name Token name
+     * @param _symbol Token symbol
+     * @param _totalSupply Total supply
+     * @param _assetType Asset type
+     * @param _assetValue Asset value
+     * @param _assetLocation Asset location
+     */
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint256 _totalSupply,
+        string memory _assetType,
+        uint256 _assetValue,
+        string memory _assetLocation
+    ) ERC20(_name, _symbol) {
+        assetType = _assetType;
+        assetValue = _assetValue;
+        assetLocation = _assetLocation;
+        _mint(msg.sender, _totalSupply);
+    }
+
+    /**
+     * @notice Add investor to whitelist
+     * @param _investor Investor address
+     */
+    function addToWhitelist(address _investor) external onlyOwner {
+        require(_investor != address(0), "Invalid address");
+        whitelist[_investor] = true;
+        emit InvestorWhitelisted(_investor, block.timestamp);
+    }
+
+    /**
+     * @notice Mark investor as accredited
+     * @param _investor Investor address
+     */
+    function markAsAccredited(address _investor) external onlyOwner {
+        require(_investor != address(0), "Invalid address");
+        accreditedInvestors[_investor] = true;
+        emit InvestorAccredited(_investor, block.timestamp);
+    }
+
+    /**
+     * @notice Override transfer to add compliance checks
+     * @param to Recipient address
+     * @param amount Amount to transfer
+     */
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        require(whitelist[msg.sender], "Sender not whitelisted");
+        require(whitelist[to], "Recipient not whitelisted");
+        return super.transfer(to, amount);
+    }
+
+    /**
+     * @notice Override transferFrom to add compliance checks
+     * @param from Sender address
+     * @param to Recipient address
+     * @param amount Amount to transfer
+     */
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+        require(whitelist[from], "Sender not whitelisted");
+        require(whitelist[to], "Recipient not whitelisted");
+        return super.transferFrom(from, to, amount);
+    }
+}
+```
+
 **注意事项**:
+
 -   ✅ 可定制的 Security Token Offering
 -   ✅ 符合 MAS 监管要求
 -   ✅ 支持多种代币标准
 -   ✅ 自动化代币分发
+-   ✅ 基于 ERC-20 标准推断
 
 ---
 
@@ -188,6 +298,7 @@ InvestaX 提供二级市场交易功能。
 5. 代币转账
 
 **注意事项**:
+
 -   ✅ 符合 MAS 监管要求
 -   ✅ 自动合规检查
 -   ✅ 流动性管理
@@ -213,6 +324,7 @@ InvestaX 支持资产管理与分红功能。
 5. 投资者查询
 
 **注意事项**:
+
 -   ✅ 自动化分红分配
 -   ✅ 按持股比例分配
 -   ✅ 透明的分红记录
@@ -230,4 +342,3 @@ InvestaX 作为新加坡金融管理局许可的机构级代币化 SaaS 平台,�
 4. **全流程服务**: 从资产代币化到二级市场交易
 
 **文档质量**: ⭐⭐⭐⭐ (基于官方网站和行业报告)
-
