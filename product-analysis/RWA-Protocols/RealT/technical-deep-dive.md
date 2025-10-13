@@ -478,9 +478,17 @@ A: 从租金收入中扣除后再分配。
 
 ## 📚 参考资源
 
+**官方资源**:
+
 -   **官方网站**: https://realt.co/
--   **文档**: https://docs.realt.co/
--   **RMM**: https://rmm.realtoken.network/
+-   **RealToken 平台**: https://realtoken.network/
+-   **RMM 流动性池**: https://rmm.realtoken.network/
+-   **社区论坛**: https://community.realt.co/
+
+**技术资源**:
+
+-   **Gnosis Chain**: https://www.gnosischain.com/
+-   **xDai 文档**: https://docs.gnosischain.com/
 
 ---
 

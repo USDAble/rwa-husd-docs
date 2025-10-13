@@ -790,19 +790,20 @@ A: 取决于监管类型,Reg D 通常需要 12 个月。
 
 ## 📚 参考资源
 
+**官方资源**:
+
 -   **官方网站**: https://securitize.io/
--   **DS Protocol 文档**: https://docs.securitize.io/
--   **SEC 规则**: https://www.sec.gov/
+-   **DS Protocol GitHub**: https://github.com/securitize-io/DSTokenInterfaces
+-   **DS Protocol 白皮书**: https://s3.us-east-2.amazonaws.com/securitizemarkets.io/Securitize%E2%80%99s+Digital+Ownership+Architecture+for+Complete+Lifecycle+Management+of+Digital+Securities.pdf
+-   **DS Protocol Medium 文章**: https://medium.com/securitize/ds-protocol-the-trust-and-registry-services-91d1c4630f78
+
+**监管资源**:
+
+-   **SEC 官网**: https://www.sec.gov/
+-   **Reg D 规则**: https://www.sec.gov/education/smallbusiness/exemptofferings/rule504
+-   **Reg S 规则**: https://www.sec.gov/education/smallbusiness/exemptofferings/regs
+-   **Reg A+ 规则**: https://www.sec.gov/education/smallbusiness/exemptofferings/rega
 
 ---
 
 **文档结束**
-
-}
-
-```
-
----
-
-
-```

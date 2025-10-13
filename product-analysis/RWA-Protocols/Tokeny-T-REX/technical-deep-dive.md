@@ -641,9 +641,18 @@ A: 可以,但需要 DEX 支持 ERC3643 标准。
 
 ## 📚 参考资源
 
+**官方资源**:
+
+-   **官方网站**: https://tokeny.com/
 -   **官方文档**: https://docs.tokeny.com/
--   **GitHub**: https://github.com/TokenySolutions/T-REX
+-   **GitHub 仓库**: https://github.com/TokenySolutions/T-REX
+-   **T-REX Engine**: https://tokeny.com/t-rex-engine/
+
+**技术标准**:
+
 -   **ERC3643 标准**: https://eips.ethereum.org/EIPS/eip-3643
+-   **ERC3643 官方页面**: https://tokeny.com/erc3643/
+-   **T-REX v4 白皮书**: https://tokeny.com/wp-content/uploads/2023/05/ERC3643-Whitepaper-T-REX-v4.pdf
 
 ---
 
