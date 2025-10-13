@@ -463,9 +463,16 @@ A: 房地产、私募股权、债券、基金等。
 
 ## 📚 参考资源
 
--   **官方网站**: https://investax.io/
--   **文档**: https://docs.investax.io/
--   **API**: https://api.investax.io/
+**官方资源**:
+
+-   **官方网站**: https://www.investax.io/ (官方主站)
+-   **博客**: https://www.investax.io/blog/ (行业报告和新闻)
+-   **Terms of Use**: https://www.investax.io/terms-of-use (服务条款)
+
+**监管资源**:
+
+-   **MAS (新加坡金融管理局)**: https://www.mas.gov.sg/
+-   **FCA (英国金融行为监管局)**: https://www.fca.org.uk/
 
 ---
 

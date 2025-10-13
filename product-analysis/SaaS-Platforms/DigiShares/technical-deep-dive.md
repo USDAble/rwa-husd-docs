@@ -429,9 +429,17 @@ A: 房地产、私募股权、债券、基金等。
 
 ## 📚 参考资源
 
--   **官方网站**: https://digishares.io/
--   **文档**: https://docs.digishares.io/
--   **Demo**: https://demo.digishares.io/
+**官方资源**:
+
+-   **官方网站**: https://digishares.io/ (官方主站)
+-   **资产代币化指南**: https://digishares.io/asset-tokenization-on-the-blockchain/ (技术指南)
+-   **房地产代币化报告**: https://digishares.io/real-estate-tokenization-reports/ (行业报告)
+-   **LinkedIn**: https://www.linkedin.com/company/digishares (官方 LinkedIn)
+
+**监管资源**:
+
+-   **EU MiCA 法规**: https://eur-lex.europa.eu/ (欧盟加密资产市场法规)
+-   **GDPR**: https://gdpr.eu/ (通用数据保护条例)
 
 ---
 

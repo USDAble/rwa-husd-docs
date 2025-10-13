@@ -1475,10 +1475,18 @@ A: 取决于份额类别配置,可能受到 ERC-1404 转账限制。
 
 ## 📚 参考资源
 
--   **官方文档**: https://updated-docs.documentation-569.pages.dev/
--   **区块浏览器**: https://centrifuge.subscan.io/
--   **治理**: https://voting.opensquare.io/space/centrifuge
--   **GitHub**: https://github.com/centrifuge
+**官方资源**:
+
+-   **官方网站**: https://centrifuge.io/ (官方主站)
+-   **官方文档**: https://docs.centrifuge.io/ (官方文档,最权威)
+-   **GitHub**: https://github.com/centrifuge (官方代码库)
+-   **区块浏览器**: https://centrifuge.subscan.io/ (链上数据查询)
+
+**治理与社区**:
+
+-   **治理平台**: https://voting.opensquare.io/space/centrifuge (链上治理)
+-   **论坛**: https://gov.centrifuge.io/ (社区讨论)
+-   **Discord**: https://discord.gg/centrifuge (社区交流)
 
 ---
 

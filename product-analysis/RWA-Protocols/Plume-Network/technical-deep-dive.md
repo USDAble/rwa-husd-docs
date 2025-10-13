@@ -412,9 +412,17 @@ A: 极低,适合高频 RWA 交易。
 
 ## 📚 参考资源
 
--   **官方网站**: https://plumenetwork.xyz/
--   **文档**: https://docs.plumenetwork.xyz/
--   **GitHub**: https://github.com/plumenetwork
+**官方资源**:
+
+-   **官方网站**: https://plume.org/ (官方主站)
+-   **Plume Portal**: https://portal.plume.org/ (应用入口)
+-   **文档**: https://docs.joinplu.me/ (官方文档)
+-   **GitHub**: https://github.com/plumenetwork (官方代码库)
+
+**社区资源**:
+
+-   **Discord**: https://discord.gg/plume
+-   **Twitter**: https://twitter.com/plumenetwork
 
 ---
 
