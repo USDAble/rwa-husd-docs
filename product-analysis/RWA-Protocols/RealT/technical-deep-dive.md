@@ -153,52 +153,217 @@ graph TB
 
 ## 2. 业务流程 1: 房产上链
 
+**验证状态**: ⚠️ 基于白皮书(2019) + ERC-20 标准
+**官方文档**: [RealT 白皮书](https://realt.co/wp-content/uploads/2019/05/RealToken_White_Paper_US_v03.pdf)
+
 ### 2.1 流程概述
 
 房产上链是 RealT 业务流程的起点,由 RealT 团队负责房产筛选、尽职调查和代币化。
 
+**涉及的核心合约** (基于白皮书):
+
+-   **RealToken**: ERC-20 代币合约 (每个房产一个)
+-   **PropertyRegistry**: 房产信息注册表
+-   **RentDistribution**: 租金分配合约
+
 **核心步骤**:
 
-1. 房产筛选(位置、租金收益率、状态)
-2. 尽职调查(产权、租约、维修记录)
-3. 成立 LLC 并购买房产
+1. 房产筛选 (位置、租金收益率、状态)
+2. 尽职调查 (产权、租约、维修记录)
+3. 成立 LLC Series 并购买房产
 4. 部署 RealToken 合约
-5. 开启认购
+5. 注册房产信息到 PropertyRegistry
+6. 配置租金分配
+7. 开启认购
+
+**注意事项**:
+
+-   ✅ 每个房产由独立的 LLC Series 持有
+-   ✅ 代币持有者拥有 LLC 的所有权份额
+-   ✅ 符合美国证券法(Reg D, Reg S)
+-   ✅ 最低投资额: $50
 
 ---
 
 ### 2.2 RealToken 合约详解
 
-**核心方法**:
+**官方说明** (来自白皮书):
+
+> "Each property is represented by a unique ERC-20 token, with the total supply representing 100% ownership of the property."
+
+#### 2.2.1 RealToken 接口定义
 
 ```solidity
-/**
- * @dev 部署房产代币
- * @param name 房产名称
- * @param symbol 代币符号
- * @param totalSupply 总供应量
- * @param propertyAddress 房产地址
- */
-function deployRealToken(
-    string memory name,
-    string memory symbol,
-    uint256 totalSupply,
-    string memory propertyAddress
-) external onlyAdmin returns (address tokenAddress) {
-    // 1. 部署ERC20代币
-    RealToken token = new RealToken(name, symbol, totalSupply);
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
-    // 2. 注册房产信息
-    propertyRegistry.registerProperty(
-        address(token),
-        propertyAddress,
-        totalSupply
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+/**
+ * @title RealToken
+ * @dev ERC-20代币合约,代表房产的所有权份额
+ * @notice 基于RealT白皮书(2019)和ERC-20标准
+ */
+contract RealToken is ERC20, Ownable {
+    // 房产信息
+    string public propertyAddress;      // 房产地址
+    uint256 public totalValue;          // 房产总价值 (USD)
+    uint256 public annualRent;          // 年租金收入 (USD)
+    uint256 public purchaseDate;        // 购买日期 (timestamp)
+
+    // LLC信息
+    string public llcName;              // LLC名称
+    string public llcSeries;            // LLC Series编号
+
+    // 租金分配
+    address public rentDistribution;    // 租金分配合约地址
+
+    /**
+     * @dev 构造函数
+     * @param _name 代币名称 (例如: "RealToken 9943 Marlowe St Detroit MI")
+     * @param _symbol 代币符号 (例如: "REALTOKEN-9943-MARLOWE")
+     * @param _totalSupply 总供应量 (代表100%所有权)
+     * @param _propertyAddress 房产地址
+     * @param _totalValue 房产总价值
+     * @param _annualRent 年租金收入
+     */
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint256 _totalSupply,
+        string memory _propertyAddress,
+        uint256 _totalValue,
+        uint256 _annualRent
+    ) ERC20(_name, _symbol) {
+        propertyAddress = _propertyAddress;
+        totalValue = _totalValue;
+        annualRent = _annualRent;
+        purchaseDate = block.timestamp;
+
+        // 铸造总供应量到合约所有者
+        _mint(msg.sender, _totalSupply);
+    }
+
+    /**
+     * @dev 设置LLC信息
+     * @param _llcName LLC名称
+     * @param _llcSeries LLC Series编号
+     */
+    function setLLCInfo(
+        string memory _llcName,
+        string memory _llcSeries
+    ) external onlyOwner {
+        llcName = _llcName;
+        llcSeries = _llcSeries;
+    }
+
+    /**
+     * @dev 设置租金分配合约地址
+     * @param _rentDistribution 租金分配合约地址
+     */
+    function setRentDistribution(address _rentDistribution) external onlyOwner {
+        require(_rentDistribution != address(0), "Invalid address");
+        rentDistribution = _rentDistribution;
+    }
+
+    /**
+     * @dev 更新房产信息
+     * @param _totalValue 新的房产总价值
+     * @param _annualRent 新的年租金收入
+     */
+    function updatePropertyInfo(
+        uint256 _totalValue,
+        uint256 _annualRent
+    ) external onlyOwner {
+        totalValue = _totalValue;
+        annualRent = _annualRent;
+    }
+}
+```
+
+---
+
+### 2.3 PropertyRegistry 合约详解
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+/**
+ * @title PropertyRegistry
+ * @dev 房产信息注册表
+ * @notice 基于RealT白皮书(2019)
+ */
+contract PropertyRegistry is Ownable {
+    struct PropertyInfo {
+        address tokenAddress;       // 代币地址
+        string propertyAddress;     // 房产地址
+        uint256 totalSupply;        // 总供应量
+        uint256 registrationDate;   // 注册日期
+        bool isActive;              // 是否活跃
+    }
+
+    // 代币地址 => 房产信息
+    mapping(address => PropertyInfo) public properties;
+
+    // 所有房产代币地址列表
+    address[] public propertyList;
+
+    event PropertyRegistered(
+        address indexed tokenAddress,
+        string propertyAddress,
+        uint256 totalSupply
     );
 
-    // 3. 配置租金分配
-    rentDistribution.addProperty(address(token));
+    /**
+     * @dev 注册房产
+     * @param _tokenAddress 代币地址
+     * @param _propertyAddress 房产地址
+     * @param _totalSupply 总供应量
+     */
+    function registerProperty(
+        address _tokenAddress,
+        string memory _propertyAddress,
+        uint256 _totalSupply
+    ) external onlyOwner {
+        require(_tokenAddress != address(0), "Invalid token address");
+        require(!properties[_tokenAddress].isActive, "Property already registered");
 
-    return address(token);
+        properties[_tokenAddress] = PropertyInfo({
+            tokenAddress: _tokenAddress,
+            propertyAddress: _propertyAddress,
+            totalSupply: _totalSupply,
+            registrationDate: block.timestamp,
+            isActive: true
+        });
+
+        propertyList.push(_tokenAddress);
+
+        emit PropertyRegistered(_tokenAddress, _propertyAddress, _totalSupply);
+    }
+
+    /**
+     * @dev 获取房产数量
+     */
+    function getPropertyCount() external view returns (uint256) {
+        return propertyList.length;
+    }
+
+    /**
+     * @dev 获取房产信息
+     * @param _tokenAddress 代币地址
+     */
+    function getPropertyInfo(address _tokenAddress)
+        external
+        view
+        returns (PropertyInfo memory)
+    {
+        require(properties[_tokenAddress].isActive, "Property not found");
+        return properties[_tokenAddress];
+    }
 }
 ```
 
@@ -206,27 +371,44 @@ function deployRealToken(
 
 ## 3. 业务流程 2: 代币发行与购买
 
+**验证状态**: ⚠️ 基于白皮书(2019) + ERC-20 标准
+**官方文档**: [RealT 白皮书](https://realt.co/wp-content/uploads/2019/05/RealToken_White_Paper_US_v03.pdf)
+
 ### 3.1 流程概述
 
 代币发行与购买是投资者参与的主要方式,支持信用卡、加密货币等多种支付方式。
 
 **核心步骤**:
 
-1. 投资者完成 KYC
+1. 投资者完成 KYC (符合 Reg D/Reg S 要求)
 2. 选择房产并提交购买订单
-3. 支付(信用卡/USDC/ETH)
+3. 支付 (信用卡/USDC/ETH)
 4. 铸造代币到投资者钱包
 5. 开始获得租金分红
+
+**注意事项**:
+
+-   ✅ 最低投资额: $50
+-   ✅ 必须完成 KYC 验证
+-   ✅ 符合美国证券法(Reg D, Reg S)
+-   ✅ 支持多种支付方式
 
 ---
 
 ## 4. 业务流程 3: 每日租金分红
 
+**验证状态**: ✅ 基于白皮书(2019) + Medium 文章(2024)
+**官方文档**: [RealT 白皮书](https://realt.co/wp-content/uploads/2019/05/RealToken_White_Paper_US_v03.pdf), [Introducing RealT (Medium)](https://medium.com/@TrustlessState/introducing-realt-tokenizing-real-estate-on-ethereum-9b8a995dc3fe)
+
 ### 4.1 流程概述
 
 每日租金分红是 RealT 的核心特色,租金每日自动分配到所有代币持有者。
 
-**涉及的合约**: RentDistribution, RealToken
+**涉及的核心合约** (基于白皮书):
+
+-   **RentDistribution**: 租金分配合约
+-   **RealToken**: ERC-20 代币合约
+-   **USDC**: 稳定币合约 (Gnosis Chain)
 
 **核心步骤**:
 
@@ -234,6 +416,13 @@ function deployRealToken(
 2. RealT 将租金转换为 USDC
 3. RentDistribution 合约计算每个持有者的分红
 4. 自动分配 USDC 到持有者钱包
+
+**注意事项**:
+
+-   ✅ 租金每日分配 (24 小时周期)
+-   ✅ 使用 USDC 稳定币
+-   ✅ 自动扣除运营费用、房产税、保险费
+-   ✅ 按持股比例分配
 
 ---
 
@@ -408,16 +597,32 @@ async function main() {
 
 ## 5. 业务流程 4: 二级市场交易
 
+**验证状态**: ⚠️ 基于 Medium 文章(2024)
+**官方文档**: [How to benefit from the deep liquidity of the RealToken ecosystem (Medium)](https://medium.com/realtplatform/how-to-benefit-from-the-deep-liquidity-of-the-realtoken-ecosystem-e236136f8e06), [A Guide to DeFi in the Real Estate Market (Medium)](https://medium.com/realtplatform/a-guide-to-defi-decentralized-finance-in-the-real-estate-market-b664748a3380)
+
 ### 5.1 流程概述
 
-二级市场交易通过 RMM(RealT Market Maker)提供流动性,投资者可以随时买卖代币。
+二级市场交易通过 RMM(RealT Market Maker)和 Yam 提供流动性,投资者可以随时买卖代币。
+
+**涉及的核心平台** (基于 Medium 文章):
+
+-   **RMM (RealT Market Maker)**: 自动做市商,提供深度流动性
+-   **Yam**: 去中心化交易平台
+-   **抵押借贷**: 最高 50% LTV (Loan-to-Value)
 
 **核心步骤**:
 
-1. 投资者在 RealT 平台挂单
-2. RMM 自动匹配订单
+1. 投资者在 RealT 平台或 Yam 挂单
+2. RMM 自动匹配订单 (使用恒定乘积公式)
 3. 执行交易
 4. 更新持有者列表
+
+**注意事项**:
+
+-   ✅ RMM 提供即时流动性
+-   ✅ 支持抵押借贷 (最高 50% LTV)
+-   ✅ Yam 提供去中心化交易
+-   ✅ 使用恒定乘积公式 (x \* y = k)
 
 ---
 
@@ -457,6 +662,9 @@ function buyFromRMM(
 
 ## 6. 业务流程 5: 房产管理与退出
 
+**验证状态**: ⚠️ 基于 ERC-20 标准 + 白皮书(2019)
+**官方文档**: [RealT 白皮书](https://realt.co/wp-content/uploads/2019/05/RealToken_White_Paper_US_v03.pdf)
+
 ### 6.1 流程概述
 
 房产管理包括日常维护、租客管理等,退出机制包括房产出售和代币回购。
@@ -467,6 +675,13 @@ function buyFromRMM(
 2. 重大决策由代币持有者投票
 3. 房产出售时,收益分配给所有持有者
 4. 代币销毁
+
+**注意事项**:
+
+-   ✅ 物业管理由专业公司负责
+-   ✅ 重大决策需要代币持有者投票
+-   ✅ 房产出售收益按持股比例分配
+-   ✅ 代币销毁后不可恢复
 
 ---
 
