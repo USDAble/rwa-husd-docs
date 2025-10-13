@@ -11,9 +11,9 @@
 ## 📑 目录
 
 1. [Harbor 概述](#1-harbor概述)
-2. [业务流程 1: R-Token发行](#2-业务流程1-r-token发行)
+2. [业务流程 1: R-Token 发行](#2-业务流程1-r-token发行)
 3. [业务流程 2: 合规检查](#3-业务流程2-合规检查)
-4. [业务流程 3: Token转账](#4-业务流程3-token转账)
+4. [业务流程 3: Token 转账](#4-业务流程3-token转账)
 5. [业务流程 4: 二级市场交易](#5-业务流程4-二级市场交易)
 6. [业务流程 5: 资产管理](#6-业务流程5-资产管理)
 
@@ -24,6 +24,7 @@
 ### 1.1 核心定位
 
 **官方定义** (来自 STOwise):
+
 > "Harbor is the compliance platform for tokenizing private securities."
 
 **Harbor 是私募证券代币化的合规平台**,提供 R-Token 标准和合规基础设施。
@@ -39,19 +40,22 @@
 
 ### 1.2 核心架构
 
-Harbor 采用**R-Token Standard + Compliance Service架构**:
+Harbor 采用**R-Token Standard + Compliance Service 架构**:
 
 #### 1.2.1 代币层
+
 -   **R-Token**: ERC-20 + 合规层
 -   **Token Registry**: 代币注册表
 -   **Transfer Rules**: 转账规则
 
 #### 1.2.2 合规层
+
 -   **Compliance Service**: 合规服务
 -   **Regulator Service**: 监管服务
 -   **Service Registry**: 服务注册表
 
 #### 1.2.3 服务层
+
 -   **KYC/AML**: 投资者验证
 -   **Accreditation**: 投资者认证
 -   **Transfer Restrictions**: 转账限制
@@ -61,11 +65,13 @@ Harbor 采用**R-Token Standard + Compliance Service架构**:
 ### 1.3 官方资源
 
 **核心文档**:
+
 -   [Harbor on STOwise](https://stowise.com/company/harbor/)
 -   [R-Token Standard](https://www.novuminsights.com/post/layers-of-security-token-ecosystem)
 -   [David Sacks on Harbor](https://www.cnbc.com/2018/02/06/ex-paypal-david-sacks-on-craft-fund-and-harbor.html)
 
 **技术资源**:
+
 -   [Real Estate Tokenization Platforms 2025](https://www.rapidinnovation.io/post/top-7-real-estate-tokenization-platforms)
 
 ---
@@ -75,20 +81,22 @@ Harbor 采用**R-Token Standard + Compliance Service架构**:
 **验证方法**: 基于行业报告 + R-Token 标准
 
 **资源限制**:
+
 -   ⚠️ Harbor 没有公开的 GitHub 仓库
 -   ⚠️ R-Token 标准文档有限
 -   ✅ 行业报告提供了详细的技术说明
 
 **验证策略**:
+
 1. **核心功能**: 基于 R-Token 标准验证 → ⚠️ 基于 R-Token 标准
 2. **合规功能**: 基于行业报告验证 → ⚠️ 基于行业报告
 3. **其他功能**: 基于 ERC-20 标准验证 → ⚠️ 基于 ERC-20 标准
 
 ---
 
-## 2. 业务流程 1: R-Token发行
+## 2. 业务流程 1: R-Token 发行
 
-**验证状态**: ⚠️ 基于 R-Token 标准  
+**验证状态**: ⚠️ 基于 R-Token 标准 + ERC-20
 **官方文档**: [R-Token Standard](https://www.novuminsights.com/post/layers-of-security-token-ecosystem)
 
 ### 2.1 流程概述
@@ -103,11 +111,126 @@ R-Token 发行是 Harbor 的核心功能,基于 ERC-20 + 合规层。
 4. 开启认购
 5. 代币分发
 
+### 2.2 R-Token 核心合约示例 (基于 R-Token 标准推断)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+/**
+ * @title RToken
+ * @notice R-Token (Regulated Token) for Harbor Platform
+ * @dev ERC-20 compatible with additional compliance layer
+ */
+contract RToken is ERC20, Ownable {
+    // Compliance Service
+    address public complianceService;
+    address public regulatorService;
+
+    // Transfer rules
+    mapping(address => bool) public whitelist;
+    mapping(address => bool) public accredited;
+
+    // Events
+    event ComplianceServiceSet(address indexed service);
+    event RegulatorServiceSet(address indexed service);
+    event TransferChecked(address indexed from, address indexed to, uint256 amount, bool allowed);
+
+    /**
+     * @notice Constructor
+     * @param _name Token name
+     * @param _symbol Token symbol
+     * @param _totalSupply Total supply
+     * @param _complianceService Compliance service address
+     */
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint256 _totalSupply,
+        address _complianceService
+    ) ERC20(_name, _symbol) {
+        complianceService = _complianceService;
+        _mint(msg.sender, _totalSupply);
+    }
+
+    /**
+     * @notice Set compliance service
+     * @param _service Compliance service address
+     */
+    function setComplianceService(address _service) external onlyOwner {
+        require(_service != address(0), "Invalid address");
+        complianceService = _service;
+        emit ComplianceServiceSet(_service);
+    }
+
+    /**
+     * @notice Set regulator service
+     * @param _service Regulator service address
+     */
+    function setRegulatorService(address _service) external onlyOwner {
+        require(_service != address(0), "Invalid address");
+        regulatorService = _service;
+        emit RegulatorServiceSet(_service);
+    }
+
+    /**
+     * @notice Check transfer compliance
+     * @param from Sender address
+     * @param to Recipient address
+     * @param amount Amount to transfer
+     * @return allowed Whether transfer is allowed
+     */
+    function checkTransfer(address from, address to, uint256 amount) public returns (bool allowed) {
+        if (complianceService != address(0)) {
+            allowed = IComplianceService(complianceService).check(from, to, amount);
+        } else {
+            allowed = whitelist[from] && whitelist[to];
+        }
+        emit TransferChecked(from, to, amount, allowed);
+        return allowed;
+    }
+
+    /**
+     * @notice Override transfer to add compliance checks
+     * @param to Recipient address
+     * @param amount Amount to transfer
+     */
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        require(checkTransfer(msg.sender, to, amount), "Transfer not allowed");
+        return super.transfer(to, amount);
+    }
+
+    /**
+     * @notice Override transferFrom to add compliance checks
+     * @param from Sender address
+     * @param to Recipient address
+     * @param amount Amount to transfer
+     */
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+        require(checkTransfer(from, to, amount), "Transfer not allowed");
+        return super.transferFrom(from, to, amount);
+    }
+}
+
+/**
+ * @title IComplianceService
+ * @notice Interface for Compliance Service
+ */
+interface IComplianceService {
+    function check(address from, address to, uint256 amount) external returns (bool);
+}
+```
+
 **注意事项**:
+
 -   ✅ 基于 ERC-20 标准
 -   ✅ 开源的 R-Token 标准
 -   ✅ 兼容现有 ERC-20 工具
 -   ✅ 内置合规检查
+-   ✅ 基于 R-Token 标准推断
 
 ---
 
@@ -129,6 +252,7 @@ R-Token 发行是 Harbor 的核心功能,基于 ERC-20 + 合规层。
 5. 合规记录上链
 
 **注意事项**:
+
 -   ✅ 自动化合规检查
 -   ✅ 支持多个监管服务
 -   ✅ 灵活的转账规则
@@ -136,7 +260,7 @@ R-Token 发行是 Harbor 的核心功能,基于 ERC-20 + 合规层。
 
 ---
 
-## 4. 业务流程 3: Token转账
+## 4. 业务流程 3: Token 转账
 
 **验证状态**: ⚠️ 基于 R-Token 标准  
 **官方文档**: [R-Token Standard](https://www.novuminsights.com/post/layers-of-security-token-ecosystem)
@@ -154,6 +278,7 @@ Token 转账必须通过合规检查。
 5. 执行转账
 
 **注意事项**:
+
 -   ✅ 自动合规检查
 -   ✅ 多层验证机制
 -   ✅ 支持部分转账
@@ -179,6 +304,7 @@ Token 转账必须通过合规检查。
 5. 更新持有者列表
 
 **注意事项**:
+
 -   ✅ 必须通过合规检查
 -   ✅ 支持多个交易所
 -   ✅ 自动更新持有者列表
@@ -204,6 +330,7 @@ Harbor 支持资产管理功能。
 5. 投资者查询
 
 **注意事项**:
+
 -   ✅ 自动化分红分配
 -   ✅ 按持股比例分配
 -   ✅ 透明的分红记录
@@ -221,4 +348,3 @@ Harbor 作为私募证券代币化的合规平台,提供了完整的 R-Token 标
 4. **Regulatory Compliance**: 符合监管要求
 
 **文档质量**: ⭐⭐⭐⭐ (基于行业报告和 R-Token 标准)
-

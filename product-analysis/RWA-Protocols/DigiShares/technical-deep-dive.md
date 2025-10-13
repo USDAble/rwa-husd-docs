@@ -12,8 +12,8 @@
 
 1. [DigiShares 概述](#1-digishares概述)
 2. [业务流程 1: 资产代币化](#2-业务流程1-资产代币化)
-3. [业务流程 2: 投资者注册与KYC](#3-业务流程2-投资者注册与kyc)
-4. [业务流程 3: Security Token发行](#4-业务流程3-security-token发行)
+3. [业务流程 2: 投资者注册与 KYC](#3-业务流程2-投资者注册与kyc)
+4. [业务流程 3: Security Token 发行](#4-业务流程3-security-token发行)
 5. [业务流程 4: 二级市场交易](#5-业务流程4-二级市场交易)
 6. [业务流程 5: 公司治理与分红](#6-业务流程5-公司治理与分红)
 
@@ -24,6 +24,7 @@
 ### 1.1 核心定位
 
 **官方定义** (来自 DigiShares 官方网站):
+
 > "White-label platform for issuance, management and trading of security tokens / tokenized securities."
 
 **DigiShares 是领先的白标代币化解决方案提供商**,专注于 RWA 代币发行、管理和交易。
@@ -39,19 +40,22 @@
 
 ### 1.2 核心架构
 
-DigiShares 采用**White-label Platform + Compliance Infrastructure架构**:
+DigiShares 采用**White-label Platform + Compliance Infrastructure 架构**:
 
 #### 1.2.1 发行层
+
 -   **Token Issuance**: 代币发行
 -   **KYC/AML**: 投资者注册与验证
 -   **Document Workflow**: 电子文档工作流
 
 #### 1.2.2 管理层
+
 -   **Corporate Actions**: 公司行动管理
 -   **Investor Relations**: 投资者关系管理
 -   **Compliance Management**: 合规管理
 
 #### 1.2.3 交易层
+
 -   **Secondary Market**: 二级市场交易
 -   **Liquidity Management**: 流动性管理
 -   **Trading Platform**: 交易平台
@@ -61,11 +65,13 @@ DigiShares 采用**White-label Platform + Compliance Infrastructure架构**:
 ### 1.3 官方资源
 
 **核心文档**:
+
 -   [DigiShares 官方网站](https://digishares.io/)
 -   [Real Estate Tokenization](https://digishares.io/real-estate-tokenization/)
 -   [Real Estate Tokenization 2.2](https://digishares.io/real-estate-tokenization-2-2/)
 
 **公司信息**:
+
 -   [DigiShares LinkedIn](https://www.linkedin.com/company/digishares)
 -   [DigiShares on Republic](https://republic.com/digishares)
 
@@ -76,11 +82,13 @@ DigiShares 采用**White-label Platform + Compliance Infrastructure架构**:
 **验证方法**: 基于官方网站
 
 **资源限制**:
+
 -   ⚠️ DigiShares 没有公开的 GitHub 仓库
 -   ⚠️ 智能合约源代码未公开
 -   ✅ 官方网站提供了详细的产品说明
 
 **验证策略**:
+
 1. **核心功能**: 基于官方网站验证 → ⚠️ 基于官方网站
 2. **合规功能**: 基于 FINRA 要求验证 → ⚠️ 基于 FINRA 要求
 3. **其他功能**: 基于 ERC-20 标准验证 → ⚠️ 基于 ERC-20 标准
@@ -105,6 +113,7 @@ DigiShares 采用**White-label Platform + Compliance Infrastructure架构**:
 5. 资产托管
 
 **注意事项**:
+
 -   ✅ 专注于房地产代币化
 -   ✅ 白标平台,可定制品牌
 -   ✅ 电子文档工作流
@@ -112,7 +121,7 @@ DigiShares 采用**White-label Platform + Compliance Infrastructure架构**:
 
 ---
 
-## 3. 业务流程 2: 投资者注册与KYC
+## 3. 业务流程 2: 投资者注册与 KYC
 
 **验证状态**: ⚠️ 基于官方网站  
 **官方文档**: [Real Estate Tokenization 2.2](https://digishares.io/real-estate-tokenization-2-2/)
@@ -130,6 +139,7 @@ DigiShares 采用**White-label Platform + Compliance Infrastructure架构**:
 5. 白名单添加
 
 **注意事项**:
+
 -   ✅ 自动化 KYC/AML 检查
 -   ✅ 电子文档工作流
 -   ✅ 电子签名支持
@@ -137,9 +147,9 @@ DigiShares 采用**White-label Platform + Compliance Infrastructure架构**:
 
 ---
 
-## 4. 业务流程 3: Security Token发行
+## 4. 业务流程 3: Security Token 发行
 
-**验证状态**: ⚠️ 基于官方网站  
+**验证状态**: ⚠️ 基于官方网站 + ERC-20 标准
 **官方文档**: [DigiShares Platform](https://digishares.io/)
 
 ### 4.1 流程概述
@@ -154,11 +164,105 @@ Security Token 发行通过 DigiShares 白标平台实现。
 4. 开启认购
 5. 代币分发
 
+### 4.2 核心合约示例 (基于 ERC-20 标准推断)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+/**
+ * @title DigiSharesSecurityToken
+ * @notice Security Token for DigiShares White-label Platform
+ * @dev Based on ERC-20 standard with compliance layer
+ */
+contract DigiSharesSecurityToken is ERC20, Ownable {
+    // Property details (Real Estate focus)
+    string public propertyAddress;
+    uint256 public propertyValue;
+    string public propertyType; // "Residential", "Commercial", etc.
+
+    // Compliance
+    mapping(address => bool) public whitelist;
+    mapping(address => uint256) public kycExpiry;
+
+    // Document workflow
+    mapping(address => bool) public documentsSigned;
+
+    // Events
+    event InvestorWhitelisted(address indexed investor, uint256 kycExpiry);
+    event DocumentsSigned(address indexed investor, uint256 timestamp);
+
+    /**
+     * @notice Constructor
+     * @param _name Token name
+     * @param _symbol Token symbol
+     * @param _totalSupply Total supply
+     * @param _propertyAddress Property address
+     * @param _propertyValue Property value
+     * @param _propertyType Property type
+     */
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint256 _totalSupply,
+        string memory _propertyAddress,
+        uint256 _propertyValue,
+        string memory _propertyType
+    ) ERC20(_name, _symbol) {
+        propertyAddress = _propertyAddress;
+        propertyValue = _propertyValue;
+        propertyType = _propertyType;
+        _mint(msg.sender, _totalSupply);
+    }
+
+    /**
+     * @notice Add investor to whitelist with KYC expiry
+     * @param _investor Investor address
+     * @param _kycExpiry KYC expiry timestamp
+     */
+    function addToWhitelist(address _investor, uint256 _kycExpiry) external onlyOwner {
+        require(_investor != address(0), "Invalid address");
+        require(_kycExpiry > block.timestamp, "KYC expiry must be in future");
+        whitelist[_investor] = true;
+        kycExpiry[_investor] = _kycExpiry;
+        emit InvestorWhitelisted(_investor, _kycExpiry);
+    }
+
+    /**
+     * @notice Mark documents as signed
+     * @param _investor Investor address
+     */
+    function signDocuments(address _investor) external onlyOwner {
+        require(_investor != address(0), "Invalid address");
+        documentsSigned[_investor] = true;
+        emit DocumentsSigned(_investor, block.timestamp);
+    }
+
+    /**
+     * @notice Override transfer to add compliance checks
+     * @param to Recipient address
+     * @param amount Amount to transfer
+     */
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        require(whitelist[msg.sender], "Sender not whitelisted");
+        require(kycExpiry[msg.sender] > block.timestamp, "Sender KYC expired");
+        require(whitelist[to], "Recipient not whitelisted");
+        require(kycExpiry[to] > block.timestamp, "Recipient KYC expired");
+        return super.transfer(to, amount);
+    }
+}
+```
+
 **注意事项**:
+
 -   ✅ 白标平台,可定制品牌
 -   ✅ 符合 FINRA 要求
 -   ✅ 支持多种代币标准
 -   ✅ 自动化代币分发
+-   ✅ 基于 ERC-20 标准推断
 
 ---
 
@@ -180,6 +284,7 @@ DigiShares 提供二级市场交易功能。
 5. 代币转账
 
 **注意事项**:
+
 -   ✅ 符合 FINRA 要求
 -   ✅ 自动合规检查
 -   ✅ 流动性管理
@@ -205,6 +310,7 @@ DigiShares 支持公司治理与分红功能。
 5. 分红记录上链
 
 **注意事项**:
+
 -   ✅ 公司行动管理
 -   ✅ 投资者关系管理
 -   ✅ 自动化分红分配
@@ -222,4 +328,3 @@ DigiShares 作为领先的白标代币化解决方案提供商,提供了完整�
 4. **Full-stack Solution**: 全栈解决方案
 
 **文档质量**: ⭐⭐⭐⭐ (基于官方网站)
-
