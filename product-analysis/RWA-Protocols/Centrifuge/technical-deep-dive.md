@@ -382,7 +382,11 @@ contract PoolCreationExample {
 
 ---
 
-## 3. 业务流程 2: 资产上链与管理
+## 3. 业务流程 2: 资产管理 ⚠️ 基于 Legacy 文档
+
+**官方文档**: [Centrifuge V2 - Asset Tokenization](https://docs.centrifuge.io/getting-started/legacy/centrifuge-v2/)
+
+**验证状态**: ⚠️ 部分验证 - 基于 Centrifuge V2 (Legacy)文档,新版本可能有变化
 
 ### 3.1 流程概述
 
@@ -622,7 +626,9 @@ async function addAssetToPool(
 
 ---
 
-## 4. 业务流程 3: 投资者存款
+## 4. 业务流程 3: 投资者存款 ⏳ 待官方验证
+
+**验证状态**: ⏳ 待验证 - 需要查找官方 Vault 投资文档
 
 ### 4.1 流程概述
 
@@ -861,7 +867,9 @@ async function investInPool(
 
 ---
 
-## 5. 业务流程 4: Epoch 执行与份额管理
+## 5. 业务流程 4: Epoch 执行与份额管理 ⏳ 待官方验证
+
+**验证状态**: ⏳ 待验证 - 需要查找官方 Epoch 机制文档
 
 ### 5.1 流程概述
 
@@ -1117,7 +1125,9 @@ async function executeEpochWorkflow(
 
 ---
 
-## 6. 业务流程 5: 赎回与提款
+## 6. 业务流程 5: 赎回与提款 ⏳ 待官方验证
+
+**验证状态**: ⏳ 待验证 - 需要查找官方 Vault 赎回文档
 
 ### 6.1 流程概述
 
