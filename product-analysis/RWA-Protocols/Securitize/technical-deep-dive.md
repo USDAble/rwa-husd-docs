@@ -30,6 +30,10 @@
 
 **Securitize 是一个机构级数字证券(Digital Securities)发行和管理平台**,为传统资产的代币化提供端到端的解决方案,符合 SEC 等全球监管要求。
 
+**官方定义** (来自 [DS Protocol Medium](https://medium.com/securitize/introducing-ds-digital-securities-protocol-securitizes-digital-ownership-architecture-for-4bcb6a9c4a16)):
+
+> "DS Protocol is Securitize's Digital Ownership Architecture for complete lifecycle management of Digital Securities"
+
 **核心价值主张**:
 
 -   **机构级平台**: 服务于房地产、私募股权、艺术品等传统资产的代币化
@@ -37,20 +41,88 @@
 -   **DS Protocol**: 自研的数字证券协议,支持复杂的公司行动
 -   **转让代理服务**: 提供完整的股东名册和合规报告服务
 
+**技术标准**:
+
+-   **基础标准**: ERC-20 扩展
+-   **相关标准**: ERC-1400, ERC-1404 (Security Token Standards)
+-   **开源仓库**: [GitHub - securitize-io/DSTokenInterfaces](https://github.com/securitize-io/DSTokenInterfaces)
+
 ---
 
-### 1.2 DS Protocol 架构
+### 1.2 DS Protocol 架构概览
 
-Securitize 采用**DS Protocol(Digital Securities Protocol)**架构:
+Securitize 采用**DS Protocol(Digital Securities Protocol)**架构,这是一个模块化的数字证券协议,允许不同组件动态关联。
 
--   **DS Registry**: 投资者注册表
--   **DS Token**: 数字证券代币合约
--   **DS Service**: 服务合约(分红、赎回等)
--   **DS Compliance**: 合规合约(SEC 规则、转账限制)
+**官方资源**:
 
-**核心合约**:
+-   **GitHub 仓库**: https://github.com/securitize-io/DSTokenInterfaces
+-   **Medium 介绍**: https://medium.com/securitize/introducing-ds-digital-securities-protocol...
+-   **接口文档**: https://medium.com/securitize/ds-protocol-interfaces-released...
 
--   DSRegistry, DSToken, DSService, DSCompliance, TransferAgent
+#### 1.2.1 五个核心接口
+
+根据 [官方 GitHub 仓库](https://github.com/securitize-io/DSTokenInterfaces),DS Protocol 包含以下核心接口:
+
+1. **DSServiceConsumerInterface**
+
+    - **功能**: DS Protocol 的基础架构
+    - **作用**: 允许不同组件动态关联
+    - **GitHub**: [DSServiceConsumerInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/service/DSServiceConsumerInterface.sol)
+
+2. **DSTokenInterface**
+
+    - **功能**: DS Token 接口定义
+    - **特点**: ERC-20 扩展,包含数字证券特有机制
+    - **特性**: 投资者中心化余额、钱包迭代能力、代币锁定
+    - **GitHub**: [DSTokenInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/token/DSTokenInterface.sol)
+
+3. **DSTrustServiceInterface**
+
+    - **功能**: 信任服务接口
+    - **作用**: 分配信任角色,授权参与者交互
+    - **GitHub**: [DSTrustServiceInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/trust/DSTrustServiceInterface.sol)
+
+4. **DSRegistryServiceInterface**
+
+    - **功能**: 注册服务接口
+    - **作用**: 保存投资者信息,确保合规和隐私
+    - **GitHub**: [DSRegistryServiceInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/registry/DSRegistryServiceInterface.sol)
+
+5. **DSComplianceServiceInterface**
+    - **功能**: 合规服务接口
+    - **作用**: 验证发行和交易操作的合规性
+    - **GitHub**: [DSComplianceServiceInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/compliance/DSComplianceServiceInterface.sol)
+
+#### 1.2.2 架构关系图
+
+```mermaid
+graph TB
+    Token[DSToken<br/>数字证券代币]
+    Service[DSServiceConsumer<br/>服务消费者]
+    Trust[DSTrustService<br/>信任服务]
+    Registry[DSRegistryService<br/>注册服务]
+    Compliance[DSComplianceService<br/>合规服务]
+
+    Token --> Service
+    Service --> Trust
+    Service --> Registry
+    Service --> Compliance
+
+    Token -.调用.-> Registry
+    Token -.调用.-> Compliance
+
+    style Token fill:#4CAF50
+    style Service fill:#2196F3
+    style Trust fill:#FF9800
+    style Registry fill:#9C27B0
+    style Compliance fill:#F44336
+```
+
+**架构说明**:
+
+-   **DSServiceConsumer**: 核心基础,所有服务都继承此接口
+-   **动态关联**: 服务可以通过 `getDSService()` 和 `setDSService()` 动态关联
+-   **模块化设计**: 每个服务独立,可以单独升级或替换
 
 ---
 
