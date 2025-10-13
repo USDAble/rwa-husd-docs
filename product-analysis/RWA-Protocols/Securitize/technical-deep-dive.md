@@ -975,119 +975,92 @@ contract InvestorRegistration {
 
 ## 4. 业务流程 3: 代币购买与转账
 
+**验证状态**: ✅ 官方验证 (基于 GitHub 官方接口)
+**官方文档**: [DSTokenInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/token/DSTokenInterface.sol), [DSComplianceServiceInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/compliance/DSComplianceServiceInterface.sol)
+
 ### 4.1 流程概述
 
 代币购买与转账是 Securitize 的核心业务流程,所有交易都需要通过严格的合规检查。
 
-**涉及的合约**: DSToken, DSCompliance, DSRegistry
+**涉及的核心接口** (基于官方 GitHub):
+
+-   **DSTokenInterface**: 数字证券代币接口 (ERC-20 扩展)
+-   **DSComplianceServiceInterface**: 合规服务接口
+-   **DSRegistryServiceInterface**: 注册服务接口
 
 **核心步骤**:
 
 1. 投资者提交购买申请
-2. 合规检查(投资者资格、投资限额、锁定期)
+2. 合规检查 (通过 DSComplianceService)
 3. 投资者支付资金
-4. 铸造代币到投资者钱包
+4. 铸造代币到投资者钱包 (issueTokens)
 5. 更新股东名册
 
----
+**注意事项**:
 
-### 4.2 DSToken 合约详解
-
-**核心方法**:
-
-```solidity
-/**
- * @dev 转账代币(带合规检查)
- * @param to 接收者地址
- * @param amount 转账金额
- */
-function transfer(address to, uint256 amount) public override returns (bool) {
-    // 1. 合规检查
-    require(compliance.canTransfer(msg.sender, to, amount), "Transfer not compliant");
-
-    // 2. 投资者验证
-    require(registry.isVerified(msg.sender), "Sender not verified");
-    require(registry.isVerified(to), "Receiver not verified");
-
-    // 3. 锁定期检查
-    require(!isLocked(msg.sender), "Tokens are locked");
-
-    // 4. 执行转账
-    _transfer(msg.sender, to, amount);
-
-    // 5. 更新股东名册
-    _updateShareholderRegistry(msg.sender, to, amount);
-
-    return true;
-}
-```
+-   ✅ 所有转账必须通过 preTransferCheck 验证
+-   ✅ 必须检查投资者是否在 DSRegistry 中注册
+-   ✅ 必须遵守代币锁定期限制
 
 ---
 
 ## 5. 业务流程 4: 分红与公司行动
 
+**验证状态**: ✅ 官方验证 (基于 GitHub 官方接口)
+**官方文档**: [DSServiceConsumerInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/service/DSServiceConsumerInterface.sol)
+
 ### 5.1 流程概述
 
-分红与公司行动是 Securitize 的核心服务,通过 DSService 合约实现。
+分红与公司行动是 Securitize 的核心服务,通过 DSServiceConsumer 架构实现。
 
-**涉及的合约**: DSService, DSToken
+**涉及的核心接口** (基于官方 GitHub):
+
+-   **DSServiceConsumerInterface**: 服务消费者基础接口
+-   **DSTokenInterface**: 数字证券代币接口
 
 **支持的公司行动**:
 
--   现金分红(Cash Dividend)
--   股票分红(Stock Dividend)
--   股票拆分(Stock Split)
--   股票回购(Buyback)
+-   现金分红 (Cash Dividend)
+-   股票分红 (Stock Dividend)
+-   股票拆分 (Stock Split)
+-   股票回购 (Buyback)
 
----
+**注意事项**:
 
-### 5.2 DSService 合约详解
-
-**核心方法**:
-
-```solidity
-/**
- * @dev 分发现金分红
- * @param token 代币地址
- * @param totalAmount 总分红金额
- */
-function distributeDividend(
-    address token,
-    uint256 totalAmount
-) external onlyIssuer {
-    // 1. 获取所有股东
-    address[] memory shareholders = DSToken(token).getShareholders();
-
-    // 2. 计算每个股东的分红
-    for (uint i = 0; i < shareholders.length; i++) {
-        address shareholder = shareholders[i];
-        uint256 balance = DSToken(token).balanceOf(shareholder);
-        uint256 dividend = (totalAmount * balance) / DSToken(token).totalSupply();
-
-        // 3. 转账分红
-        payable(shareholder).transfer(dividend);
-
-        // 4. 触发事件
-        emit DividendPaid(token, shareholder, dividend);
-    }
-}
-```
+-   ✅ 分红必须按持股比例分配
+-   ✅ 必须记录分红历史
+-   ✅ 必须遵守 SEC 报告要求
 
 ---
 
 ## 6. 业务流程 5: 二级市场交易
 
+**验证状态**: ✅ 官方验证 (基于 GitHub 官方接口)
+**官方文档**: [DSTokenInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/token/DSTokenInterface.sol), [DSComplianceServiceInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/compliance/DSComplianceServiceInterface.sol)
+
 ### 6.1 流程概述
 
 二级市场交易允许投资者在锁定期后交易数字证券。
+
+**涉及的核心接口** (基于官方 GitHub):
+
+-   **DSTokenInterface**: 数字证券代币接口 (ERC-20 扩展)
+-   **DSComplianceServiceInterface**: 合规服务接口
+-   **DSRegistryServiceInterface**: 注册服务接口
 
 **核心步骤**:
 
 1. 投资者在 Securitize Markets 挂单
 2. 买家提交购买订单
-3. 合规检查(买家资格、卖家锁定期)
-4. 执行交易
+3. 合规检查 (通过 preTransferCheck)
+4. 执行交易 (transfer)
 5. 更新股东名册
+
+**注意事项**:
+
+-   ✅ 必须通过 DSComplianceService 验证
+-   ✅ 必须检查代币锁定期
+-   ✅ 必须更新 DSRegistry 中的持有者信息
 
 ---
 
