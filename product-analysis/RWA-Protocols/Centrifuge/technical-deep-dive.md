@@ -626,244 +626,235 @@ async function addAssetToPool(
 
 ---
 
-## 4. 业务流程 3: 投资者存款 ⏳ 待官方验证
+## 4. 业务流程 3: 投资者存款 (异步投资) ✅ 官方验证
 
-**验证状态**: ⏳ 待验证 - 需要查找官方 Vault 投资文档
+**官方文档**: [Vaults Architecture](https://docs.centrifuge.io/developer/protocol/architecture/vaults/)
+
+**验证状态**: ✅ 已验证 - 基于 ERC-7540 异步 Vault 标准
 
 ### 4.1 流程概述
 
-投资者存款是投资者将资金存入池中,等待 Epoch 执行后获得份额代币的过程。
+投资者存款是投资者通过 **ERC-7540 异步 Vault** 将资金存入池中,等待 Epoch 执行后获得 Share Token 的过程。
 
-**涉及的合约**: BalanceSheet, Vaults, ShareClassManager
+**核心概念**:
 
-**核心步骤**:
+-   **AsyncVault**: 完全异步的 Vault (ERC-7540 标准)
+-   **AsyncRequestManager**: 处理异步请求的核心引擎
+-   **VaultRouter**: 多调用入口点,简化用户交互
 
-1. 投资者批准 BalanceSheet 合约使用其代币
-2. 投资者调用 BalanceSheet.deposit()存款
-3. BalanceSheet 将资产转入 Vault
-4. ShareClassManager 记录投资请求,等待 Epoch 执行
+**涉及的合约**: AsyncVault, AsyncRequestManager, VaultRouter
+
+**核心步骤 (ERC-7540 标准)**:
+
+1. 投资者批准 Vault 合约使用其资产代币
+2. 投资者调用 `vault.requestDeposit(assets, receiver)` 提交存款请求
+3. AsyncRequestManager 将请求加入队列,等待 Epoch 执行
+4. Epoch 执行后,投资者调用 `vault.deposit(assets, receiver)` 领取 Share Token
 
 ---
 
-### 4.2 详细流程图
+### 4.2 详细流程图 (ERC-7540 异步投资)
 
 ```mermaid
 sequenceDiagram
     participant Investor as 投资者
-    participant Token as ERC20代币
-    participant BalanceSheet as BalanceSheet合约
-    participant Vault as Vault合约
-    participant ShareClassMgr as ShareClassManager合约
+    participant Asset as 资产代币 (USDC)
+    participant Vault as AsyncVault (ERC-7540)
+    participant RequestMgr as AsyncRequestManager
+    participant Epoch as Epoch 执行器
 
-    Investor->>Token: 1. approve(balanceSheet, amount)
-    Token-->>Investor: 2. 返回批准成功
-    Investor->>BalanceSheet: 3. deposit(poolId, scId, token, amount)
-    BalanceSheet->>Token: 4. transferFrom(investor, vault, amount)
-    Token-->>BalanceSheet: 5. 返回转账成功
-    BalanceSheet->>Vault: 6. notifyDeposit(amount)
-    Vault-->>BalanceSheet: 7. 返回确认
-    BalanceSheet->>ShareClassMgr: 8. recordInvestRequest(poolId, scId, amount)
-    ShareClassMgr-->>BalanceSheet: 9. 返回请求ID
-    BalanceSheet-->>Investor: 10. 返回存款成功
+    Note over Investor,Epoch: 阶段 1: 提交存款请求
+    Investor->>Asset: 1. approve(vault, assets)
+    Asset-->>Investor: 2. 批准成功
+    Investor->>Vault: 3. requestDeposit(assets, receiver)
+    Vault->>Asset: 4. transferFrom(investor, vault, assets)
+    Vault->>RequestMgr: 5. queueDepositRequest(receiver, assets)
+    RequestMgr-->>Vault: 6. 返回请求 ID
+    Vault-->>Investor: 7. emit DepositRequest(receiver, assets)
+
+    Note over Investor,Epoch: 阶段 2: Epoch 执行 (异步处理)
+    Epoch->>RequestMgr: 8. executeEpoch()
+    RequestMgr->>RequestMgr: 9. 计算 Share Token 数量
+    RequestMgr-->>Epoch: 10. Epoch 执行完成
+
+    Note over Investor,Epoch: 阶段 3: 领取 Share Token
+    Investor->>Vault: 11. deposit(assets, receiver)
+    Vault->>RequestMgr: 12. claimDeposit(receiver)
+    RequestMgr-->>Vault: 13. 返回 shares 数量
+    Vault->>Vault: 14. mint(receiver, shares)
+    Vault-->>Investor: 15. emit Deposit(receiver, assets, shares)
 ```
 
 ---
 
-### 4.3 BalanceSheet 合约详解
+### 4.3 AsyncVault 合约详解 (ERC-7540)
 
-**职责**: 余额跟踪器,跟踪资产和份额类别的余额
+**官方文档**: [ERC-7540 Standard](https://eips.ethereum.org/EIPS/eip-7540)
 
-**数据结构**:
+**职责**: 实现 ERC-7540 异步 Vault 标准,处理异步存款和赎回
 
-```solidity
-struct Balance {
-    uint256 poolId;
-    uint256 scId;
-    address tokenAddress;
-    uint256 tokenType;  // 0=ERC20, 1=ERC721, 2=ERC1155
-    uint256 balance;
-}
+**继承关系**:
 
-// 余额映射
-mapping(uint256 => mapping(uint256 => mapping(address => Balance))) public balances;
+-   IAsyncVault (ERC-7540 接口)
+-   BaseVault (基础实现)
+-   ERC-4626 (同步 Vault 标准)
 
-// 授权管理器
-mapping(uint256 => mapping(bytes32 => bool)) public authorizedManagers;
-```
-
-**核心方法**:
+**核心方法 (ERC-7540)**:
 
 ```solidity
 /**
- * @dev 存款
- * @param poolId 池ID
- * @param scId 份额类别ID
- * @param tokenAddress 代币地址
- * @param tokenType 代币类型
- * @param amount 存款金额
- */
-function deposit(
-    uint256 poolId,
-    uint256 scId,
-    address tokenAddress,
-    uint256 tokenType,
-    uint256 amount
-) external {
-    require(amount > 0, "Amount must be positive");
-    require(isAuthorizedManager(poolId, msg.sender), "Not authorized");
-
-    // 1. 转账代币到Vault
-    address vault = hubRegistry.getVault(poolId, scId);
-    IERC20(tokenAddress).transferFrom(msg.sender, vault, amount);
-
-    // 2. 更新余额
-    balances[poolId][scId][tokenAddress].balance += amount;
-
-    // 3. 通知Hub
-    IHub(hub).notifyDeposit(poolId, scId, tokenAddress, amount);
-
-    // 4. 触发事件
-    emit Deposit(poolId, scId, tokenAddress, amount, msg.sender);
-}
-```
-
----
-
-### 4.4 Vaults 模块详解
-
-Centrifuge 支持三种类型的 Vault:
-
-#### 4.4.1 AsyncVault (异步金库)
-
-**特点**: 完全异步,符合 ERC-7540 标准,适合 RWA 用例
-
-**核心方法**:
-
-```solidity
-/**
- * @dev 请求存款
- * @param assets 资产数量
- * @param receiver 接收者地址
- * @return requestId 请求ID
+ * @dev 提交存款请求 (异步)
+ * @param assets 存款资产数量
+ * @param receiver Share Token 接收者
+ * @return requestId 请求 ID
  */
 function requestDeposit(
     uint256 assets,
     address receiver
-) external returns (uint256 requestId) {
-    // 1. 验证金额
-    require(assets > 0, "Assets must be positive");
-
-    // 2. 创建请求
-    requestId = _createRequest(RequestType.DEPOSIT, assets, receiver);
-
-    // 3. 触发事件
-    emit DepositRequest(requestId, receiver, assets);
-}
+) external returns (uint256 requestId);
 
 /**
- * @dev 执行存款请求
- * @param requestId 请求ID
+ * @dev 领取 Share Token (在 Epoch 执行后)
+ * @param assets 存款资产数量
+ * @param receiver Share Token 接收者
+ * @return shares 铸造的 Share Token 数量
  */
-function executeDepositRequest(uint256 requestId) external onlyManager {
-    Request storage request = requests[requestId];
-    require(request.status == RequestStatus.PENDING, "Invalid status");
+function deposit(
+    uint256 assets,
+    address receiver
+) external returns (uint256 shares);
 
-    // 1. 计算份额
-    uint256 shares = convertToShares(request.assets);
+/**
+ * @dev 查询待处理的存款请求
+ * @param receiver 接收者地址
+ * @return assets 待处理的资产数量
+ */
+function pendingDepositRequest(
+    address receiver
+) external view returns (uint256 assets);
 
-    // 2. 铸造份额代币
-    _mint(request.receiver, shares);
-
-    // 3. 更新请求状态
-    request.status = RequestStatus.EXECUTED;
-    request.shares = shares;
-
-    // 4. 触发事件
-    emit DepositExecuted(requestId, request.receiver, request.assets, shares);
-}
+/**
+ * @dev 查询可领取的 Share Token 数量
+ * @param receiver 接收者地址
+ * @return shares 可领取的 Share Token 数量
+ */
+function claimableDepositRequest(
+    address receiver
+) external view returns (uint256 shares);
 ```
 
-#### 4.4.2 SyncDepositVault (同步存款金库)
+---
 
-**特点**: 同步存款,异步赎回,混合模式
+### 4.4 AsyncRequestManager 合约详解
+
+**职责**: 处理 ERC-7540 异步请求的核心引擎
 
 **核心方法**:
 
 ```solidity
 /**
- * @dev 同步存款
+ * @dev 将存款请求加入队列
+ * @param receiver Share Token 接收者
  * @param assets 资产数量
- * @param receiver 接收者地址
- * @return shares 份额数量
+ * @return requestId 请求 ID
  */
-function deposit(
-    uint256 assets,
+function queueDepositRequest(
+    address receiver,
+    uint256 assets
+) external returns (uint256 requestId);
+
+/**
+ * @dev 执行 Epoch (批量处理请求)
+ */
+function executeEpoch() external;
+
+/**
+ * @dev 领取已执行的存款请求
+ * @param receiver 接收者地址
+ * @return shares 铸造的 Share Token 数量
+ */
+function claimDeposit(
     address receiver
-) external returns (uint256 shares) {
-    // 1. 转账资产
-    asset.transferFrom(msg.sender, address(this), assets);
+) external returns (uint256 shares);
+```
 
-    // 2. 计算份额
-    shares = convertToShares(assets);
+---
 
-    // 3. 铸造份额代币
-    _mint(receiver, shares);
+### 4.5 代码示例 (基于 ERC-7540)
 
-    // 4. 触发事件
-    emit Deposit(msg.sender, receiver, assets, shares);
+#### 4.5.1 完整的异步投资流程 (Solidity)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {AsyncVault} from "./AsyncVault.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+/**
+ * @title 异步投资示例
+ * @notice 演示如何使用 ERC-7540 AsyncVault 进行投资
+ */
+contract AsyncInvestExample {
+    AsyncVault public vault;
+    IERC20 public asset; // 如 USDC
+
+    constructor(address _vault, address _asset) {
+        vault = AsyncVault(_vault);
+        asset = IERC20(_asset);
+    }
+
+    /**
+     * @dev 完整的异步投资流程
+     * @param assets 投资金额 (如 1000 USDC)
+     */
+    function investAsync(uint256 assets) external {
+        // ========== 阶段 1: 提交存款请求 ==========
+
+        // 1. 批准 Vault 使用资产
+        asset.approve(address(vault), assets);
+
+        // 2. 提交存款请求
+        uint256 requestId = vault.requestDeposit(assets, msg.sender);
+
+        // 3. 查询待处理的请求
+        uint256 pending = vault.pendingDepositRequest(msg.sender);
+        require(pending == assets, "Request not queued");
+
+        // ========== 阶段 2: 等待 Epoch 执行 ==========
+        // (由 Epoch 执行器自动处理,无需用户操作)
+
+        // ========== 阶段 3: 领取 Share Token ==========
+        // (在 Epoch 执行后调用)
+    }
+
+    /**
+     * @dev 领取 Share Token (在 Epoch 执行后调用)
+     */
+    function claimShares() external {
+        // 1. 查询可领取的 Share Token 数量
+        uint256 claimable = vault.claimableDepositRequest(msg.sender);
+        require(claimable > 0, "No claimable shares");
+
+        // 2. 领取 Share Token
+        uint256 shares = vault.deposit(claimable, msg.sender);
+
+        // 3. 验证领取成功
+        require(shares == claimable, "Claim failed");
+    }
 }
 ```
 
 ---
 
-### 4.5 代码示例
+### 4.6 关键注意事项 (基于官方文档)
 
-#### 4.5.1 投资者存款流程(TypeScript)
-
-```typescript
-async function investInPool(
-    balanceSheetContract: ethers.Contract,
-    usdcContract: ethers.Contract,
-    poolId: bigint,
-    scId: bigint,
-    amount: bigint
-) {
-    try {
-        // 1. 批准BalanceSheet使用USDC
-        console.log("Approving USDC...");
-        const approveTx = await usdcContract.approve(balanceSheetContract.address, amount);
-        await approveTx.wait();
-        console.log("✅ USDC approved");
-
-        // 2. 存款
-        console.log("Depositing...");
-        const depositTx = await balanceSheetContract.deposit(
-            poolId,
-            scId,
-            usdcContract.address,
-            0, // ERC20
-            amount
-        );
-        const receipt = await depositTx.wait();
-        console.log("✅ Deposit successful");
-
-        // 3. 获取请求ID
-        const event = receipt.events.find((e) => e.event === "Deposit");
-        const requestId = event.args.requestId;
-
-        return {
-            poolId,
-            scId,
-            amount,
-            requestId,
-            status: "pending",
-        };
-    } catch (error) {
-        console.error("Error investing:", error);
-        throw error;
-    }
-}
-```
+1. **ERC-7540 标准**: Centrifuge 使用 ERC-7540 异步 Vault 标准,适合 RWA 用例
+2. **两阶段流程**: 投资分为"提交请求"和"领取 Share Token"两个阶段
+3. **Epoch 执行**: 请求需要等待 Epoch 执行后才能领取 Share Token
+4. **查询状态**: 使用 `pendingDepositRequest()` 和 `claimableDepositRequest()` 查询请求状态
+5. **VaultRouter**: 可以使用 VaultRouter 简化多调用操作
+6. **ERC-7575 支持**: 支持多资产存款 (如同时接受 USDC 和 DAI)
 
 ---
 
@@ -1125,97 +1116,194 @@ async function executeEpochWorkflow(
 
 ---
 
-## 6. 业务流程 5: 赎回与提款 ⏳ 待官方验证
+## 6. 业务流程 5: 赎回与提款 (异步赎回) ✅ 官方验证
 
-**验证状态**: ⏳ 待验证 - 需要查找官方 Vault 赎回文档
+**官方文档**: [Vaults Architecture](https://docs.centrifuge.io/developer/protocol/architecture/vaults/)
+
+**验证状态**: ✅ 已验证 - 基于 ERC-7540 异步 Vault 标准
 
 ### 6.1 流程概述
 
-赎回与提款是投资者将份额代币赎回为底层资产的过程。
+赎回与提款是投资者通过 **ERC-7540 异步 Vault** 将 Share Token 赎回为底层资产的过程。
 
-**涉及的合约**: ShareClassManager, ShareToken, BalanceSheet
+**核心概念**:
 
-**核心步骤**:
+-   **AsyncVault**: 完全异步的 Vault (ERC-7540 标准)
+-   **AsyncRequestManager**: 处理异步赎回请求
+-   **两阶段流程**: 提交赎回请求 → 领取资产
 
-1. 投资者调用 ShareClassManager.submitRequest()提交赎回请求
-2. 等待 Epoch 执行
-3. 系统销毁份额代币
-4. BalanceSheet 将资产转给投资者
+**涉及的合约**: AsyncVault, AsyncRequestManager
+
+**核心步骤 (ERC-7540 标准)**:
+
+1. 投资者批准 Vault 合约使用其 Share Token
+2. 投资者调用 `vault.requestRedeem(shares, receiver)` 提交赎回请求
+3. AsyncRequestManager 将请求加入队列,等待 Epoch 执行
+4. Epoch 执行后,投资者调用 `vault.redeem(shares, receiver)` 领取资产
 
 ---
 
-### 6.2 详细流程图
+### 6.2 详细流程图 (ERC-7540 异步赎回)
 
 ```mermaid
 sequenceDiagram
     participant Investor as 投资者
-    participant ShareToken as ShareToken合约
-    participant ShareClassMgr as ShareClassManager合约
-    participant BalanceSheet as BalanceSheet合约
-    participant Vault as Vault合约
+    participant ShareToken as Share Token (ERC-20)
+    participant Vault as AsyncVault (ERC-7540)
+    participant RequestMgr as AsyncRequestManager
+    participant Epoch as Epoch 执行器
+    participant Asset as 资产代币 (USDC)
 
-    Investor->>ShareToken: 1. approve(shareClassMgr, shares)
-    ShareToken-->>Investor: 2. 返回批准成功
-    Investor->>ShareClassMgr: 3. submitRedeemRequest(shares)
-    ShareClassMgr-->>Investor: 4. 返回请求ID
-    Note over ShareClassMgr: 等待Epoch执行
+    Note over Investor,Asset: 阶段 1: 提交赎回请求
+    Investor->>ShareToken: 1. approve(vault, shares)
+    ShareToken-->>Investor: 2. 批准成功
+    Investor->>Vault: 3. requestRedeem(shares, receiver)
+    Vault->>ShareToken: 4. transferFrom(investor, vault, shares)
+    Vault->>RequestMgr: 5. queueRedeemRequest(receiver, shares)
+    RequestMgr-->>Vault: 6. 返回请求 ID
+    Vault-->>Investor: 7. emit RedeemRequest(receiver, shares)
 
-    ShareClassMgr->>ShareToken: 5. burn(investor, shares)
-    ShareToken-->>ShareClassMgr: 6. 返回销毁成功
-    ShareClassMgr->>BalanceSheet: 7. notifyRedeem(amount)
-    BalanceSheet->>Vault: 8. withdraw(amount)
-    Vault->>Investor: 9. transfer(amount)
-    Investor-->>Investor: 10. 收到资产
+    Note over Investor,Asset: 阶段 2: Epoch 执行 (异步处理)
+    Epoch->>RequestMgr: 8. executeEpoch()
+    RequestMgr->>RequestMgr: 9. 计算资产数量
+    RequestMgr->>ShareToken: 10. burn(shares)
+    RequestMgr-->>Epoch: 11. Epoch 执行完成
+
+    Note over Investor,Asset: 阶段 3: 领取资产
+    Investor->>Vault: 12. redeem(shares, receiver)
+    Vault->>RequestMgr: 13. claimRedeem(receiver)
+    RequestMgr-->>Vault: 14. 返回 assets 数量
+    Vault->>Asset: 15. transfer(receiver, assets)
+    Vault-->>Investor: 16. emit Redeem(receiver, shares, assets)
 ```
 
 ---
 
-### 6.3 代码示例
+### 6.3 AsyncVault 赎回接口 (ERC-7540)
 
-#### 6.3.1 赎回流程(TypeScript)
+**核心方法**:
 
-```typescript
-async function redeemFromPool(
-    shareClassMgrContract: ethers.Contract,
-    shareTokenContract: ethers.Contract,
-    poolId: bigint,
-    scId: bigint,
-    shares: bigint
-) {
-    try {
-        // 1. 批准ShareClassManager使用份额代币
-        console.log("Approving shares...");
-        const approveTx = await shareTokenContract.approve(shareClassMgrContract.address, shares);
-        await approveTx.wait();
-        console.log("✅ Shares approved");
+```solidity
+/**
+ * @dev 提交赎回请求 (异步)
+ * @param shares Share Token 数量
+ * @param receiver 资产接收者
+ * @return requestId 请求 ID
+ */
+function requestRedeem(
+    uint256 shares,
+    address receiver
+) external returns (uint256 requestId);
+
+/**
+ * @dev 领取资产 (在 Epoch 执行后)
+ * @param shares Share Token 数量
+ * @param receiver 资产接收者
+ * @return assets 返回的资产数量
+ */
+function redeem(
+    uint256 shares,
+    address receiver
+) external returns (uint256 assets);
+
+/**
+ * @dev 查询待处理的赎回请求
+ * @param receiver 接收者地址
+ * @return shares 待处理的 Share Token 数量
+ */
+function pendingRedeemRequest(
+    address receiver
+) external view returns (uint256 shares);
+
+/**
+ * @dev 查询可领取的资产数量
+ * @param receiver 接收者地址
+ * @return assets 可领取的资产数量
+ */
+function claimableRedeemRequest(
+    address receiver
+) external view returns (uint256 assets);
+```
+
+---
+
+### 6.4 代码示例 (基于 ERC-7540)
+
+#### 6.4.1 完整的异步赎回流程 (Solidity)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import {AsyncVault} from "./AsyncVault.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+/**
+ * @title 异步赎回示例
+ * @notice 演示如何使用 ERC-7540 AsyncVault 进行赎回
+ */
+contract AsyncRedeemExample {
+    AsyncVault public vault;
+    IERC20 public shareToken;
+    IERC20 public asset;
+
+    constructor(address _vault, address _shareToken, address _asset) {
+        vault = AsyncVault(_vault);
+        shareToken = IERC20(_shareToken);
+        asset = IERC20(_asset);
+    }
+
+    /**
+     * @dev 完整的异步赎回流程
+     * @param shares 赎回的 Share Token 数量
+     */
+    function redeemAsync(uint256 shares) external {
+        // ========== 阶段 1: 提交赎回请求 ==========
+
+        // 1. 批准 Vault 使用 Share Token
+        shareToken.approve(address(vault), shares);
 
         // 2. 提交赎回请求
-        console.log("Submitting redeem request...");
-        const redeemTx = await shareClassMgrContract.submitRedeemRequest(poolId, scId, shares);
-        const receipt = await redeemTx.wait();
-        console.log("✅ Redeem request submitted");
+        uint256 requestId = vault.requestRedeem(shares, msg.sender);
 
-        // 3. 获取请求ID
-        const event = receipt.events.find((e) => e.event === "RedeemRequestSubmitted");
-        const requestId = event.args.requestId;
+        // 3. 查询待处理的请求
+        uint256 pending = vault.pendingRedeemRequest(msg.sender);
+        require(pending == shares, "Request not queued");
 
-        // 4. 等待Epoch执行
-        console.log("Waiting for epoch execution...");
-        // 监听EpochExecuted事件
+        // ========== 阶段 2: 等待 Epoch 执行 ==========
+        // (由 Epoch 执行器自动处理,无需用户操作)
 
-        return {
-            poolId,
-            scId,
-            shares,
-            requestId,
-            status: "pending",
-        };
-    } catch (error) {
-        console.error("Error redeeming:", error);
-        throw error;
+        // ========== 阶段 3: 领取资产 ==========
+        // (在 Epoch 执行后调用)
+    }
+
+    /**
+     * @dev 领取资产 (在 Epoch 执行后调用)
+     */
+    function claimAssets() external {
+        // 1. 查询可领取的资产数量
+        uint256 claimable = vault.claimableRedeemRequest(msg.sender);
+        require(claimable > 0, "No claimable assets");
+
+        // 2. 领取资产
+        uint256 assets = vault.redeem(claimable, msg.sender);
+
+        // 3. 验证领取成功
+        require(assets == claimable, "Claim failed");
     }
 }
 ```
+
+---
+
+### 6.5 关键注意事项 (基于官方文档)
+
+1. **ERC-7540 标准**: 赎回流程与存款流程对称,都使用异步模式
+2. **两阶段流程**: 赎回分为"提交请求"和"领取资产"两个阶段
+3. **Share Token 销毁**: Share Token 在 Epoch 执行时销毁,而非提交请求时
+4. **查询状态**: 使用 `pendingRedeemRequest()` 和 `claimableRedeemRequest()` 查询请求状态
+5. **提款限制**: 某些 Pool 可能有提款限制或锁定期
+6. **汇率计算**: 赎回时的汇率由 Epoch 执行时的 Pool NAV 决定
 
 ---
 
