@@ -124,6 +124,97 @@ graph TB
 -   **动态关联**: 服务可以通过 `getDSService()` 和 `setDSService()` 动态关联
 -   **模块化设计**: 每个服务独立,可以单独升级或替换
 
+#### 1.2.3 完整系统架构图
+
+```mermaid
+graph TB
+    subgraph "资产层"
+        A1[房地产]
+        A2[私募股权]
+        A3[艺术品]
+        A4[其他资产]
+    end
+
+    subgraph "法律层"
+        L1[SPV/Trust]
+        L2[转让代理<br/>Transfer Agent]
+        L3[SEC监管<br/>Reg D/S/A+]
+    end
+
+    subgraph "Securitize平台"
+        P1[证券代币发行]
+        P2[投资者注册与KYC]
+        P3[DS Protocol<br/>5个核心接口]
+        P4[分红与公司行动]
+        P5[二级市场交易]
+    end
+
+    subgraph "DS Protocol层"
+        D1[DSToken<br/>ERC-20扩展]
+        D2[DSServiceConsumer<br/>服务消费者]
+        D3[DSTrustService<br/>信任服务]
+        D4[DSRegistryService<br/>注册服务]
+        D5[DSComplianceService<br/>合规服务]
+    end
+
+    subgraph "区块链层"
+        B1[Ethereum]
+        B2[Polygon]
+        B3[数字证券代币]
+    end
+
+    subgraph "投资者层"
+        I1[认证投资者<br/>Accredited]
+        I2[机构投资者]
+        I3[零售投资者<br/>Reg A+]
+    end
+
+    A1 & A2 & A3 & A4 --> L1
+    L1 --> L2
+    L1 --> P1
+    L3 --> P1
+
+    P1 --> P3
+    P2 --> P3
+    P3 --> D1 & D2 & D3 & D4 & D5
+    D1 --> B1 & B2
+    B1 & B2 --> B3
+
+    B3 --> P4
+    B3 --> P5
+
+    P2 --> I1 & I2 & I3
+    P5 --> I1 & I2 & I3
+
+    style P1 fill:#e1f5ff
+    style P2 fill:#e1f5ff
+    style P3 fill:#e1f5ff
+    style P4 fill:#e1f5ff
+    style P5 fill:#e1f5ff
+    style D1 fill:#4CAF50
+    style D2 fill:#2196F3
+    style D3 fill:#FF9800
+    style D4 fill:#9C27B0
+    style D5 fill:#F44336
+    style L3 fill:#fff4e1
+```
+
+**完整架构说明**:
+
+-   **资产层**: 支持房地产、私募股权、艺术品等多种传统资产
+-   **法律层**: SPV/Trust 结构 + 转让代理服务 + SEC 监管合规
+-   **平台层**: Securitize 核心平台,提供完整的数字证券生命周期管理
+-   **DS Protocol 层**: 5 个核心接口,模块化设计,支持动态关联
+-   **区块链层**: 支持 Ethereum 和 Polygon,基于 ERC-20 扩展
+-   **投资者层**: 支持认证投资者、机构投资者和零售投资者(Reg A+)
+
+**核心特性**:
+
+-   **转让代理服务**: 提供完整的股东名册和合规报告
+-   **DS Protocol**: 模块化设计,每个服务可独立升级
+-   **多链支持**: Ethereum 和 Polygon 双链部署
+-   **全面合规**: 符合 SEC Reg D、Reg S、Reg A+等监管要求
+
 ---
 
 ## 2. 业务流程 1: 证券代币发行

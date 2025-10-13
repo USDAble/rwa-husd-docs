@@ -112,6 +112,102 @@ graph TB
     style Yam fill:#9C27B0
 ```
 
+### 1.3.1 完整系统架构图
+
+```mermaid
+graph TB
+    subgraph "资产层"
+        A1[美国房地产<br/>住宅/商业]
+    end
+
+    subgraph "法律层"
+        L1[LLC Series<br/>每房产一个LLC]
+        L2[房产管理公司]
+        L3[SEC监管<br/>Reg D/S]
+    end
+
+    subgraph "RealT平台"
+        P1[房产上链]
+        P2[代币发行与购买]
+        P3[每日租金分红]
+        P4[二级市场交易]
+        P5[房产管理与退出]
+    end
+
+    subgraph "智能合约层"
+        S1[RealToken<br/>ERC-20]
+        S2[RentDistribution<br/>租金分配]
+        S3[PropertyRegistry<br/>房产注册]
+        S4[RMM<br/>自动做市商]
+    end
+
+    subgraph "DeFi集成层"
+        D1[Yam<br/>去中心化交易]
+        D2[抵押借贷<br/>50% LTV]
+        D3[流动性池]
+    end
+
+    subgraph "区块链层"
+        B1[Gnosis Chain<br/>原xDai]
+        B2[ERC-20代币]
+    end
+
+    subgraph "投资者层"
+        I1[零售投资者<br/>最低$50]
+        I2[DeFi用户]
+    end
+
+    A1 --> L1
+    L1 --> L2
+    L1 --> P1
+    L3 --> P1
+
+    P1 --> P2
+    P2 --> S1
+    S1 --> S2 & S3 & S4
+    S1 --> B1
+    B1 --> B2
+
+    B2 --> D1 & D2 & D3
+    S2 --> P3
+    S4 --> P4
+    D1 --> P4
+
+    P2 --> I1
+    P3 --> I1
+    P4 --> I1 & I2
+    D2 --> I2
+
+    style P1 fill:#e1f5ff
+    style P2 fill:#e1f5ff
+    style P3 fill:#e1f5ff
+    style P4 fill:#e1f5ff
+    style P5 fill:#e1f5ff
+    style S1 fill:#4CAF50
+    style S2 fill:#2196F3
+    style S4 fill:#FF9800
+    style D1 fill:#9C27B0
+    style L3 fill:#fff4e1
+```
+
+**完整架构说明**:
+
+-   **资产层**: 专注于美国房地产(住宅和商业地产)
+-   **法律层**: 每个房产由独立的 LLC Series 持有,符合 SEC 监管
+-   **平台层**: RealT 核心平台,提供完整的房地产代币化生命周期
+-   **智能合约层**: 基于 ERC-20 的 RealToken + 自动化租金分配 + RMM 做市商
+-   **DeFi 集成层**: 与 Yam、抵押借贷等 DeFi 协议深度集成
+-   **区块链层**: 部署在 Gnosis Chain(低 Gas 费,高 TPS)
+-   **投资者层**: 零售友好(最低$50) + DeFi 用户
+
+**核心特性**:
+
+-   **每日租金分红**: 租金每日自动分配到投资者钱包(USDC)
+-   **RMM 流动性**: 自动做市商提供深度流动性
+-   **DeFi 集成**: 支持抵押借贷(最高 50% LTV)
+-   **低门槛**: 最低$50 即可投资房地产
+-   **Gnosis Chain**: 低 Gas 费,适合高频小额交易
+
 ---
 
 ### 1.4 官方资源
