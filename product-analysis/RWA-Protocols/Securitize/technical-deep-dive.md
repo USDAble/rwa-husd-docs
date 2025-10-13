@@ -151,6 +151,14 @@ function deployToken(
 #### 2.4.1 发行数字证券(TypeScript)
 
 ```typescript
+import { ethers } from "ethers";
+
+/**
+ * 发行数字证券完整流程
+ * @param factoryContract DSTokenFactory合约实例
+ * @param securityConfig 证券配置参数
+ * @returns 部署结果
+ */
 async function issueDigitalSecurity(
     factoryContract: ethers.Contract,
     securityConfig: {
@@ -159,11 +167,19 @@ async function issueDigitalSecurity(
         totalSupply: bigint;
         regType: "RegD" | "RegS" | "RegA";
         lockupPeriod: number; // 锁定期(天)
+        minInvestment: bigint; // 最小投资额
+        maxInvestors: number; // 最大投资者数量
     }
 ) {
     try {
-        // 1. 部署数字证券
-        console.log("Deploying digital security...");
+        console.log("🚀 开始发行数字证券...");
+        console.log("证券名称:", securityConfig.name);
+        console.log("证券符号:", securityConfig.symbol);
+        console.log("总供应量:", securityConfig.totalSupply.toString());
+        console.log("监管类型:", securityConfig.regType);
+
+        // 1. 部署数字证券合约
+        console.log("\n步骤1: 部署DSToken合约...");
         const tx = await factoryContract.deployToken(
             securityConfig.name,
             securityConfig.symbol,
@@ -171,28 +187,96 @@ async function issueDigitalSecurity(
             securityConfig.regType
         );
 
+        console.log("交易哈希:", tx.hash);
         const receipt = await tx.wait();
-        console.log("✅ Digital security deployed");
+        console.log("✅ 合约部署成功!");
 
-        // 2. 获取代币地址
+        // 2. 获取部署的合约地址
         const event = receipt.events.find((e) => e.event === "TokenDeployed");
+        if (!event) {
+            throw new Error("TokenDeployed事件未找到");
+        }
+
         const tokenAddress = event.args.tokenAddress;
+        const registryAddress = event.args.registryAddress;
+        const complianceAddress = event.args.complianceAddress;
+
+        console.log("\n📋 部署的合约地址:");
+        console.log("DSToken:", tokenAddress);
+        console.log("DSRegistry:", registryAddress);
+        console.log("DSCompliance:", complianceAddress);
 
         // 3. 配置锁定期
+        console.log("\n步骤2: 配置锁定期...");
         const tokenContract = new ethers.Contract(tokenAddress, DSTokenABI, signer);
-        await tokenContract.setLockupPeriod(securityConfig.lockupPeriod * 86400);
+        const lockupSeconds = securityConfig.lockupPeriod * 86400;
+        const tx2 = await tokenContract.setLockupPeriod(lockupSeconds);
+        await tx2.wait();
+        console.log("✅ 锁定期设置为", securityConfig.lockupPeriod, "天");
+
+        // 4. 配置投资限制
+        console.log("\n步骤3: 配置投资限制...");
+        const complianceContract = new ethers.Contract(complianceAddress, DSComplianceABI, signer);
+        const tx3 = await complianceContract.setInvestmentLimits(
+            securityConfig.minInvestment,
+            securityConfig.maxInvestors
+        );
+        await tx3.wait();
+        console.log(
+            "✅ 最小投资额:",
+            ethers.utils.formatEther(securityConfig.minInvestment),
+            "ETH"
+        );
+        console.log("✅ 最大投资者数量:", securityConfig.maxInvestors);
+
+        // 5. 验证部署
+        console.log("\n步骤4: 验证部署...");
+        const name = await tokenContract.name();
+        const symbol = await tokenContract.symbol();
+        const totalSupply = await tokenContract.totalSupply();
+        const lockupPeriod = await tokenContract.lockupPeriod();
+
+        console.log("\n📊 验证结果:");
+        console.log("名称:", name);
+        console.log("符号:", symbol);
+        console.log("总供应量:", totalSupply.toString());
+        console.log("锁定期:", lockupPeriod.toNumber() / 86400, "天");
 
         return {
             tokenAddress,
+            registryAddress,
+            complianceAddress,
             name: securityConfig.name,
             symbol: securityConfig.symbol,
+            totalSupply: securityConfig.totalSupply,
             regType: securityConfig.regType,
             status: "deployed",
+            deploymentTime: new Date().toISOString(),
         };
     } catch (error) {
-        console.error("Error issuing digital security:", error);
+        console.error("❌ 发行数字证券失败:", error);
         throw error;
     }
+}
+
+// 使用示例
+async function main() {
+    const provider = new ethers.providers.JsonRpcProvider("https://mainnet.infura.io/v3/YOUR_KEY");
+    const wallet = new ethers.Wallet("YOUR_PRIVATE_KEY", provider);
+    const factoryContract = new ethers.Contract(FACTORY_ADDRESS, DSTokenFactoryABI, wallet);
+
+    const result = await issueDigitalSecurity(factoryContract, {
+        name: "Real Estate Token A",
+        symbol: "RETA",
+        totalSupply: ethers.utils.parseEther("1000000"), // 100万代币
+        regType: "RegD",
+        lockupPeriod: 365, // 1年锁定期
+        minInvestment: ethers.utils.parseEther("10000"), // 最小投资1万美元
+        maxInvestors: 99, // 最多99个投资者
+    });
+
+    console.log("\n🎉 数字证券发行完成!");
+    console.log("代币地址:", result.tokenAddress);
 }
 ```
 
@@ -295,9 +379,159 @@ function addInvestor(
 
     // 3. 触发事件
     emit InvestorAdded(wallet, accreditationLevel, country);
+}
+```
 
+---
 
-## 4. 业务流程3: 代币购买与转账
+### 3.4 代码示例
+
+#### 3.4.1 投资者注册完整流程(TypeScript)
+
+```typescript
+import { ethers } from "ethers";
+
+/**
+ * 投资者注册完整流程
+ * @param registryContract DSRegistry合约实例
+ * @param investorData 投资者数据
+ * @returns 注册结果
+ */
+async function registerInvestor(
+    registryContract: ethers.Contract,
+    investorData: {
+        wallet: string;
+        email: string;
+        fullName: string;
+        country: number; // ISO 3166-1 numeric country code
+        accreditationType: "individual" | "institutional";
+        annualIncome?: bigint; // 年收入(仅个人投资者)
+        netWorth?: bigint; // 净资产(仅个人投资者)
+        aum?: bigint; // 管理资产规模(仅机构投资者)
+    }
+) {
+    try {
+        console.log("🚀 开始投资者注册流程...");
+        console.log("投资者钱包:", investorData.wallet);
+        console.log("投资者姓名:", investorData.fullName);
+        console.log("国家代码:", investorData.country);
+
+        // 1. 验证投资者资格
+        console.log("\n步骤1: 验证投资者资格...");
+        let accreditationLevel = 0;
+
+        if (investorData.accreditationType === "individual") {
+            // 个人投资者: 年收入>$200K 或 净资产>$1M
+            const minIncome = ethers.utils.parseEther("200000");
+            const minNetWorth = ethers.utils.parseEther("1000000");
+
+            if (
+                (investorData.annualIncome && investorData.annualIncome.gte(minIncome)) ||
+                (investorData.netWorth && investorData.netWorth.gte(minNetWorth))
+            ) {
+                accreditationLevel = 1; // 合格个人投资者
+                console.log("✅ 符合合格个人投资者标准");
+            } else {
+                throw new Error("不符合合格投资者标准");
+            }
+        } else if (investorData.accreditationType === "institutional") {
+            // 机构投资者: AUM>$5M
+            const minAUM = ethers.utils.parseEther("5000000");
+
+            if (investorData.aum && investorData.aum.gte(minAUM)) {
+                accreditationLevel = 2; // 合格机构投资者
+                console.log("✅ 符合合格机构投资者标准");
+            } else {
+                throw new Error("不符合合格机构投资者标准");
+            }
+        }
+
+        // 2. 提交KYC申请
+        console.log("\n步骤2: 提交KYC申请...");
+        // 这里应该调用第三方KYC服务,此处简化处理
+        const kycResult = await submitKYC({
+            wallet: investorData.wallet,
+            email: investorData.email,
+            fullName: investorData.fullName,
+            country: investorData.country,
+        });
+
+        if (!kycResult.verified) {
+            throw new Error("KYC验证失败: " + kycResult.reason);
+        }
+        console.log("✅ KYC验证通过");
+
+        // 3. 添加投资者到注册表
+        console.log("\n步骤3: 添加投资者到注册表...");
+        const tx = await registryContract.addInvestor(
+            investorData.wallet,
+            accreditationLevel,
+            investorData.country
+        );
+
+        console.log("交易哈希:", tx.hash);
+        const receipt = await tx.wait();
+        console.log("✅ 投资者注册成功!");
+
+        // 4. 验证注册结果
+        console.log("\n步骤4: 验证注册结果...");
+        const investor = await registryContract.investors(investorData.wallet);
+        const isVerified = await registryContract.isVerified(investorData.wallet);
+
+        console.log("\n📊 注册结果:");
+        console.log("钱包地址:", investor.wallet);
+        console.log("认证级别:", investor.accreditationLevel);
+        console.log("国家代码:", investor.country);
+        console.log("注册时间:", new Date(investor.registeredAt.toNumber() * 1000).toISOString());
+        console.log("验证状态:", isVerified);
+
+        return {
+            wallet: investorData.wallet,
+            accreditationLevel,
+            country: investorData.country,
+            verified: isVerified,
+            registrationTime: new Date().toISOString(),
+        };
+    } catch (error) {
+        console.error("❌ 投资者注册失败:", error);
+        throw error;
+    }
+}
+
+// KYC提交函数(模拟)
+async function submitKYC(data: any) {
+    // 实际应用中应调用第三方KYC服务API
+    // 例如: Onfido, Jumio, Sumsub等
+    return {
+        verified: true,
+        reason: "",
+    };
+}
+
+// 使用示例
+async function main() {
+    const provider = new ethers.providers.JsonRpcProvider("https://mainnet.infura.io/v3/YOUR_KEY");
+    const wallet = new ethers.Wallet("YOUR_PRIVATE_KEY", provider);
+    const registryContract = new ethers.Contract(REGISTRY_ADDRESS, DSRegistryABI, wallet);
+
+    const result = await registerInvestor(registryContract, {
+        wallet: "0x1234567890123456789012345678901234567890",
+        email: "investor@example.com",
+        fullName: "John Doe",
+        country: 840, // 美国
+        accreditationType: "individual",
+        annualIncome: ethers.utils.parseEther("250000"), // 年收入25万美元
+        netWorth: ethers.utils.parseEther("1500000"), // 净资产150万美元
+    });
+
+    console.log("\n🎉 投资者注册完成!");
+    console.log("认证级别:", result.accreditationLevel);
+}
+```
+
+---
+
+## 4. 业务流程 3: 代币购买与转账
 
 ### 4.1 流程概述
 
