@@ -293,6 +293,134 @@ function registerIdentity(
 
 ---
 
+### 3.3 代码示例
+
+#### 3.3.1 投资者 KYC 与身份注册(TypeScript)
+
+```typescript
+import { ethers } from "ethers";
+
+/**
+ * 投资者KYC与身份注册完整流程
+ */
+async function registerInvestorWithKYC(
+    registryContract: ethers.Contract,
+    investorData: {
+        wallet: string;
+        onchainID: string; // ONCHAINID地址
+        country: number; // ISO 3166-1 country code
+        claims: Array<{
+            topic: number; // Claim topic (e.g., 1 = KYC)
+            issuer: string; // Trusted issuer address
+            signature: string; // Claim signature
+            data: string; // Claim data
+        }>;
+    }
+) {
+    try {
+        console.log("🔐 开始投资者KYC与身份注册...");
+        console.log("投资者钱包:", investorData.wallet);
+        console.log("ONCHAINID:", investorData.onchainID);
+
+        // 1. 验证ONCHAINID
+        console.log("\n步骤1: 验证ONCHAINID...");
+        const identityContract = new ethers.Contract(
+            investorData.onchainID,
+            ONCHAINID_ABI,
+            provider
+        );
+        const owner = await identityContract.owner();
+
+        if (owner.toLowerCase() !== investorData.wallet.toLowerCase()) {
+            throw new Error("ONCHAINID所有者与投资者钱包不匹配");
+        }
+        console.log("✅ ONCHAINID验证通过");
+
+        // 2. 添加Claims到ONCHAINID
+        console.log("\n步骤2: 添加Claims到ONCHAINID...");
+        for (const claim of investorData.claims) {
+            console.log(`  添加Claim: Topic ${claim.topic}`);
+
+            const tx = await identityContract.addClaim(
+                claim.topic,
+                1, // scheme (ECDSA)
+                claim.issuer,
+                claim.signature,
+                claim.data,
+                ""
+            );
+
+            await tx.wait();
+            console.log(`  ✅ Claim ${claim.topic} 添加成功`);
+        }
+
+        // 3. 注册投资者到IdentityRegistry
+        console.log("\n步骤3: 注册投资者到IdentityRegistry...");
+        const tx = await registryContract.registerInvestor(
+            investorData.wallet,
+            investorData.onchainID,
+            investorData.country
+        );
+
+        console.log("交易哈希:", tx.hash);
+        const receipt = await tx.wait();
+        console.log("✅ 投资者注册成功!");
+
+        // 4. 验证注册结果
+        console.log("\n步骤4: 验证注册结果...");
+        const isVerified = await registryContract.isVerified(investorData.wallet);
+        const registeredIdentity = await registryContract.identity(investorData.wallet);
+        const investorCountry = await registryContract.investorCountry(investorData.wallet);
+
+        console.log("\n📊 注册结果:");
+        console.log("验证状态:", isVerified);
+        console.log("ONCHAINID:", registeredIdentity);
+        console.log("国家代码:", investorCountry);
+
+        return {
+            wallet: investorData.wallet,
+            onchainID: investorData.onchainID,
+            verified: isVerified,
+            country: investorCountry,
+            registrationTime: new Date().toISOString(),
+        };
+    } catch (error) {
+        console.error("❌ 投资者注册失败:", error);
+        throw error;
+    }
+}
+
+// 使用示例
+async function main() {
+    const provider = new ethers.providers.JsonRpcProvider("https://mainnet.infura.io/v3/YOUR_KEY");
+    const wallet = new ethers.Wallet("YOUR_PRIVATE_KEY", provider);
+    const registryContract = new ethers.Contract(
+        IDENTITY_REGISTRY_ADDRESS,
+        IdentityRegistryABI,
+        wallet
+    );
+
+    const result = await registerInvestorWithKYC(registryContract, {
+        wallet: "0x1234567890123456789012345678901234567890",
+        onchainID: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12",
+        country: 840, // 美国
+        claims: [
+            {
+                topic: 1, // KYC Claim
+                issuer: "0xTRUSTED_ISSUER_ADDRESS",
+                signature: "0xSIGNATURE_DATA",
+                data: "0xCLAIM_DATA",
+            },
+        ],
+    });
+
+    console.log("\n🎉 投资者KYC与身份注册完成!");
+    console.log("验证状态:", result.verified);
+}
+```
+
+---
+
 ## 4. 业务流程 3: 代币发行与转账
 
 ### 4.1 流程概述
