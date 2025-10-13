@@ -575,11 +575,18 @@ contract DSTokenDeployment {
 
 ## 3. 业务流程 2: 投资者注册与 KYC
 
+**验证状态**: ✅ 官方验证 (基于 GitHub 官方接口)
+**官方文档**: [DSRegistryServiceInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/registry/DSRegistryServiceInterface.sol)
+
 ### 3.1 流程概述
 
 投资者注册与 KYC 是 Securitize 的核心功能,确保所有投资者符合 SEC 的合格投资者(Accredited Investor)要求。
 
-**涉及的合约**: DSRegistry, KYCProvider
+**涉及的核心接口** (基于官方 GitHub):
+
+-   **DSRegistryServiceInterface**: 注册服务接口 (保存投资者信息)
+-   **DSTrustServiceInterface**: 信任服务接口 (分配角色权限)
+-   **DSServiceConsumerInterface**: 服务消费者基础接口
 
 **核心步骤**:
 
@@ -587,8 +594,9 @@ contract DSTokenDeployment {
 2. 提交 KYC/AML 资料
 3. 第三方 KYC 提供商验证身份
 4. Securitize 审核投资者资格(合格投资者认证)
-5. 将投资者添加到 DSRegistry
-6. 投资者获得购买权限
+5. 将投资者添加到 DSRegistryService
+6. 通过 DSTrustService 分配投资者角色
+7. 投资者获得购买权限
 
 ---
 
@@ -599,8 +607,9 @@ sequenceDiagram
     participant Investor as 投资者
     participant Platform as Securitize平台
     participant KYC as KYC提供商
-    participant Registry as DSRegistry合约
-    participant Compliance as DSCompliance合约
+    participant Registry as DSRegistryService
+    participant Trust as DSTrustService
+    participant Compliance as DSComplianceService
 
     Investor->>Platform: 1. 提交注册申请
     Investor->>Platform: 2. 提交KYC/AML资料
@@ -608,217 +617,359 @@ sequenceDiagram
     KYC->>KYC: 4. 验证身份
     KYC-->>Platform: 5. 返回验证结果
     Platform->>Platform: 6. 审核投资者资格
-    Platform->>Registry: 7. addInvestor(address, accreditationLevel)
-    Registry->>Compliance: 8. 验证合规性
-    Compliance-->>Registry: 9. 返回合规确认
-    Registry-->>Platform: 10. 返回注册成功
+    Platform->>Registry: 7. set(investorId, key, value)
+    Platform->>Trust: 8. assignRole(investor, INVESTOR_ROLE)
+    Platform->>Compliance: 9. 验证合规性
+    Compliance-->>Platform: 10. 返回合规确认
     Platform-->>Investor: 11. 注册成功通知
 ```
 
 ---
 
-### 3.3 DSRegistry 合约详解
+### 3.3 DSRegistryServiceInterface 合约详解
 
-**职责**: 投资者注册表,管理投资者身份和资格
+**官方接口**: [DSRegistryServiceInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/registry/DSRegistryServiceInterface.sol)
 
-**数据结构**:
+**职责**: 注册服务接口,保存投资者信息,确保合规和隐私
 
-```solidity
-struct Investor {
-    address wallet;
-    uint8 accreditationLevel; // 0=未认证, 1=合格投资者, 2=机构投资者
-    uint16 country;
-    uint256 registeredAt;
-    bool verified;
-}
+**核心特性**:
 
-// 投资者地址 => 投资者信息
-mapping(address => Investor) public investors;
-
-// 国家代码 => 投资者数量
-mapping(uint16 => uint256) public investorCountByCountry;
-```
+-   **键值存储**: 使用 key-value 模式存储投资者信息
+-   **隐私保护**: 敏感信息存储在链下,链上仅存储哈希
+-   **灵活扩展**: 支持自定义字段
 
 **核心方法**:
 
-````solidity
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.4.23;
+
+import "../service/DSServiceConsumerInterface.sol";
+
 /**
- * @dev 添加投资者
- * @param wallet 投资者钱包地址
- * @param accreditationLevel 认证级别
- * @param country 国家代码
+ * @title DSRegistryServiceInterface
+ * @dev 注册服务接口 (基于官方GitHub)
+ * @notice 保存投资者信息,确保合规和隐私
  */
-function addInvestor(
-    address wallet,
-    uint8 accreditationLevel,
-    uint16 country
-) external onlyAdmin {
-    require(investors[wallet].wallet == address(0), "Already registered");
-    require(accreditationLevel > 0, "Invalid accreditation level");
+contract DSRegistryServiceInterface is DSServiceConsumerInterface {
 
-    // 1. 添加投资者
-    investors[wallet] = Investor({
-        wallet: wallet,
-        accreditationLevel: accreditationLevel,
-        country: country,
-        registeredAt: block.timestamp,
-        verified: true
-    });
+    // ============ 核心功能 ============
 
-    // 2. 更新统计
-    investorCountByCountry[country]++;
+    /**
+     * @dev 设置投资者信息
+     * @param _id 投资者ID (通常是哈希值)
+     * @param _key 信息键
+     * @param _value 信息值
+     * @return 是否成功
+     */
+    function set(string _id, string _key, string _value)
+        public
+        /*onlyIssuerOrAbove*/
+        returns (bool);
 
-    // 3. 触发事件
-    emit InvestorAdded(wallet, accreditationLevel, country);
+    /**
+     * @dev 批量设置投资者信息
+     * @param _id 投资者ID
+     * @param _keys 信息键数组
+     * @param _values 信息值数组
+     * @return 是否成功
+     */
+    function setMultiple(string _id, string[] _keys, string[] _values)
+        public
+        /*onlyIssuerOrAbove*/
+        returns (bool);
+
+    /**
+     * @dev 获取投资者信息
+     * @param _id 投资者ID
+     * @param _key 信息键
+     * @return 信息值
+     */
+    function get(string _id, string _key)
+        public
+        view
+        returns (string);
+
+    /**
+     * @dev 批量获取投资者信息
+     * @param _id 投资者ID
+     * @param _keys 信息键数组
+     * @return 信息值数组
+     */
+    function getMultiple(string _id, string[] _keys)
+        public
+        view
+        returns (string[]);
+
+    // ============ 事件 ============
+
+    event RegistryEntrySet(string indexed id, string key, string value);
 }
 ```
 
 ---
 
-### 3.4 代码示例
+### 3.4 DSTrustServiceInterface 合约详解
 
-#### 3.4.1 投资者注册完整流程(TypeScript)
+**官方接口**: [DSTrustServiceInterface.sol](https://github.com/securitize-io/DSTokenInterfaces/blob/master/contracts/dsprotocol/trust/DSTrustServiceInterface.sol)
 
-```typescript
-import { ethers } from "ethers";
+**职责**: 信任服务接口,分配信任角色,授权参与者交互
+
+**核心角色**:
+
+-   **MASTER_ROLE**: 主管理员 (最高权限)
+-   **ISSUER_ROLE**: 发行者 (可发行、销毁代币)
+-   **EXCHANGE_ROLE**: 交易所 (可执行交易)
+-   **INVESTOR_ROLE**: 投资者 (可持有、转账代币)
+
+**核心方法**:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.4.23;
+
+import "../service/DSServiceConsumerInterface.sol";
 
 /**
- * 投资者注册完整流程
- * @param registryContract DSRegistry合约实例
- * @param investorData 投资者数据
- * @returns 注册结果
+ * @title DSTrustServiceInterface
+ * @dev 信任服务接口 (基于官方GitHub)
+ * @notice 分配信任角色,授权参与者交互
  */
-async function registerInvestor(
-    registryContract: ethers.Contract,
-    investorData: {
-        wallet: string;
-        email: string;
-        fullName: string;
-        country: number; // ISO 3166-1 numeric country code
-        accreditationType: "individual" | "institutional";
-        annualIncome?: bigint; // 年收入(仅个人投资者)
-        netWorth?: bigint; // 净资产(仅个人投资者)
-        aum?: bigint; // 管理资产规模(仅机构投资者)
-    }
-) {
-    try {
-        console.log("🚀 开始投资者注册流程...");
-        console.log("投资者钱包:", investorData.wallet);
-        console.log("投资者姓名:", investorData.fullName);
-        console.log("国家代码:", investorData.country);
+contract DSTrustServiceInterface is DSServiceConsumerInterface {
 
-        // 1. 验证投资者资格
-        console.log("\n步骤1: 验证投资者资格...");
-        let accreditationLevel = 0;
+    // ============ 角色管理 ============
 
-        if (investorData.accreditationType === "individual") {
-            // 个人投资者: 年收入>$200K 或 净资产>$1M
-            const minIncome = ethers.utils.parseEther("200000");
-            const minNetWorth = ethers.utils.parseEther("1000000");
+    /**
+     * @dev 分配角色
+     * @param _address 地址
+     * @param _role 角色 (MASTER=1, ISSUER=2, EXCHANGE=4, INVESTOR=8)
+     * @return 是否成功
+     */
+    function assignRole(address _address, uint _role)
+        public
+        /*onlyMaster*/
+        returns (bool);
 
-            if (
-                (investorData.annualIncome && investorData.annualIncome.gte(minIncome)) ||
-                (investorData.netWorth && investorData.netWorth.gte(minNetWorth))
-            ) {
-                accreditationLevel = 1; // 合格个人投资者
-                console.log("✅ 符合合格个人投资者标准");
-            } else {
-                throw new Error("不符合合格投资者标准");
-            }
-        } else if (investorData.accreditationType === "institutional") {
-            // 机构投资者: AUM>$5M
-            const minAUM = ethers.utils.parseEther("5000000");
+    /**
+     * @dev 移除角色
+     * @param _address 地址
+     * @param _role 角色
+     * @return 是否成功
+     */
+    function removeRole(address _address, uint _role)
+        public
+        /*onlyMaster*/
+        returns (bool);
 
-            if (investorData.aum && investorData.aum.gte(minAUM)) {
-                accreditationLevel = 2; // 合格机构投资者
-                console.log("✅ 符合合格机构投资者标准");
-            } else {
-                throw new Error("不符合合格机构投资者标准");
-            }
-        }
+    /**
+     * @dev 检查是否拥有角色
+     * @param _address 地址
+     * @param _role 角色
+     * @return 是否拥有
+     */
+    function hasRole(address _address, uint _role)
+        public
+        view
+        returns (bool);
 
-        // 2. 提交KYC申请
-        console.log("\n步骤2: 提交KYC申请...");
-        // 这里应该调用第三方KYC服务,此处简化处理
-        const kycResult = await submitKYC({
-            wallet: investorData.wallet,
-            email: investorData.email,
-            fullName: investorData.fullName,
-            country: investorData.country,
-        });
+    // ============ 事件 ============
 
-        if (!kycResult.verified) {
-            throw new Error("KYC验证失败: " + kycResult.reason);
-        }
-        console.log("✅ KYC验证通过");
-
-        // 3. 添加投资者到注册表
-        console.log("\n步骤3: 添加投资者到注册表...");
-        const tx = await registryContract.addInvestor(
-            investorData.wallet,
-            accreditationLevel,
-            investorData.country
-        );
-
-        console.log("交易哈希:", tx.hash);
-        const receipt = await tx.wait();
-        console.log("✅ 投资者注册成功!");
-
-        // 4. 验证注册结果
-        console.log("\n步骤4: 验证注册结果...");
-        const investor = await registryContract.investors(investorData.wallet);
-        const isVerified = await registryContract.isVerified(investorData.wallet);
-
-        console.log("\n📊 注册结果:");
-        console.log("钱包地址:", investor.wallet);
-        console.log("认证级别:", investor.accreditationLevel);
-        console.log("国家代码:", investor.country);
-        console.log("注册时间:", new Date(investor.registeredAt.toNumber() * 1000).toISOString());
-        console.log("验证状态:", isVerified);
-
-        return {
-            wallet: investorData.wallet,
-            accreditationLevel,
-            country: investorData.country,
-            verified: isVerified,
-            registrationTime: new Date().toISOString(),
-        };
-    } catch (error) {
-        console.error("❌ 投资者注册失败:", error);
-        throw error;
-    }
-}
-
-// KYC提交函数(模拟)
-async function submitKYC(data: any) {
-    // 实际应用中应调用第三方KYC服务API
-    // 例如: Onfido, Jumio, Sumsub等
-    return {
-        verified: true,
-        reason: "",
-    };
-}
-
-// 使用示例
-async function main() {
-    const provider = new ethers.providers.JsonRpcProvider("https://mainnet.infura.io/v3/YOUR_KEY");
-    const wallet = new ethers.Wallet("YOUR_PRIVATE_KEY", provider);
-    const registryContract = new ethers.Contract(REGISTRY_ADDRESS, DSRegistryABI, wallet);
-
-    const result = await registerInvestor(registryContract, {
-        wallet: "0x1234567890123456789012345678901234567890",
-        email: "investor@example.com",
-        fullName: "John Doe",
-        country: 840, // 美国
-        accreditationType: "individual",
-        annualIncome: ethers.utils.parseEther("250000"), // 年收入25万美元
-        netWorth: ethers.utils.parseEther("1500000"), // 净资产150万美元
-    });
-
-    console.log("\n🎉 投资者注册完成!");
-    console.log("认证级别:", result.accreditationLevel);
+    event RoleAssigned(address indexed addr, uint role);
+    event RoleRemoved(address indexed addr, uint role);
 }
 ```
+
+---
+
+### 3.5 代码示例
+
+#### 3.5.1 投资者注册完整流程 (Solidity)
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.4.23;
+
+import "./DSRegistryServiceInterface.sol";
+import "./DSTrustServiceInterface.sol";
+
+/**
+ * @title InvestorRegistration
+ * @dev 投资者注册完整流程示例
+ * @notice 基于官方GitHub接口实现
+ */
+contract InvestorRegistration {
+
+    // ============ 状态变量 ============
+
+    address public owner;
+    DSRegistryServiceInterface public registryService;
+    DSTrustServiceInterface public trustService;
+
+    // 角色常量 (来自DSTrustServiceInterface)
+    uint public constant INVESTOR_ROLE = 8;
+
+    // ============ 事件 ============
+
+    event InvestorRegistered(
+        address indexed investor,
+        string investorId,
+        uint timestamp
+    );
+
+    // ============ 修饰符 ============
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this");
+        _;
+    }
+
+    // ============ 构造函数 ============
+
+    constructor(
+        address _registryService,
+        address _trustService
+    ) public {
+        require(_registryService != address(0), "Invalid registry service");
+        require(_trustService != address(0), "Invalid trust service");
+
+        owner = msg.sender;
+        registryService = DSRegistryServiceInterface(_registryService);
+        trustService = DSTrustServiceInterface(_trustService);
+    }
+
+    // ============ 核心功能 ============
+
+    /**
+     * @dev 步骤1: 注册投资者信息
+     * @param _investor 投资者地址
+     * @param _investorId 投资者ID (哈希值)
+     * @param _keys 信息键数组
+     * @param _values 信息值数组
+     * @return 是否成功
+     */
+    function registerInvestorInfo(
+        address _investor,
+        string _investorId,
+        string[] _keys,
+        string[] _values
+    ) public onlyOwner returns (bool) {
+        require(_investor != address(0), "Invalid investor address");
+        require(bytes(_investorId).length > 0, "Invalid investor ID");
+        require(_keys.length == _values.length, "Keys and values length mismatch");
+        require(_keys.length > 0, "Empty keys array");
+
+        // 1. 批量设置投资者信息到Registry
+        bool success = registryService.setMultiple(_investorId, _keys, _values);
+        require(success, "Failed to set investor info");
+
+        return true;
+    }
+
+    /**
+     * @dev 步骤2: 分配投资者角色
+     * @param _investor 投资者地址
+     * @return 是否成功
+     */
+    function assignInvestorRole(
+        address _investor
+    ) public onlyOwner returns (bool) {
+        require(_investor != address(0), "Invalid investor address");
+
+        // 1. 分配INVESTOR_ROLE
+        bool success = trustService.assignRole(_investor, INVESTOR_ROLE);
+        require(success, "Failed to assign investor role");
+
+        return true;
+    }
+
+    /**
+     * @dev 完整注册流程 (一次性完成)
+     * @param _investor 投资者地址
+     * @param _investorId 投资者ID
+     * @param _keys 信息键数组
+     * @param _values 信息值数组
+     * @return 是否成功
+     */
+    function registerInvestor(
+        address _investor,
+        string _investorId,
+        string[] _keys,
+        string[] _values
+    ) public onlyOwner returns (bool) {
+        // 1. 注册投资者信息
+        bool infoSuccess = registerInvestorInfo(_investor, _investorId, _keys, _values);
+        require(infoSuccess, "Failed to register investor info");
+
+        // 2. 分配投资者角色
+        bool roleSuccess = assignInvestorRole(_investor);
+        require(roleSuccess, "Failed to assign investor role");
+
+        // 3. 触发事件
+        emit InvestorRegistered(_investor, _investorId, now);
+
+        return true;
+    }
+
+    // ============ 查询功能 ============
+
+    /**
+     * @dev 查询投资者信息
+     * @param _investorId 投资者ID
+     * @param _key 信息键
+     * @return 信息值
+     */
+    function getInvestorInfo(
+        string _investorId,
+        string _key
+    ) public view returns (string) {
+        return registryService.get(_investorId, _key);
+    }
+
+    /**
+     * @dev 批量查询投资者信息
+     * @param _investorId 投资者ID
+     * @param _keys 信息键数组
+     * @return 信息值数组
+     */
+    function getInvestorInfoMultiple(
+        string _investorId,
+        string[] _keys
+    ) public view returns (string[]) {
+        return registryService.getMultiple(_investorId, _keys);
+    }
+
+    /**
+     * @dev 检查投资者是否拥有角色
+     * @param _investor 投资者地址
+     * @return 是否拥有INVESTOR_ROLE
+     */
+    function isInvestor(address _investor) public view returns (bool) {
+        return trustService.hasRole(_investor, INVESTOR_ROLE);
+    }
+}
+```
+
+---
+
+### 3.6 注意事项
+
+**注册前准备**:
+
+1. ✅ 确保已部署 DSRegistryService 和 DSTrustService
+2. ✅ 确保注册者拥有足够的权限 (onlyIssuerOrAbove)
+3. ✅ 确保投资者已完成 KYC/AML 验证
+
+**合规要求**:
+
+1. ✅ 必须符合 SEC 合格投资者标准
+2. ✅ 必须通过第三方 KYC 提供商验证
+3. ✅ 必须在 DSRegistry 中记录完整信息
+
+**隐私保护**:
+
+1. ✅ 敏感信息存储在链下,链上仅存储哈希
+2. ✅ 使用投资者 ID (哈希值) 而非明文地址
+3. ✅ 遵守 GDPR 等隐私法规
 
 ---
 
@@ -826,11 +977,12 @@ async function main() {
 
 ### 4.1 流程概述
 
-代币购买与转账是Securitize的核心业务流程,所有交易都需要通过严格的合规检查。
+代币购买与转账是 Securitize 的核心业务流程,所有交易都需要通过严格的合规检查。
 
 **涉及的合约**: DSToken, DSCompliance, DSRegistry
 
 **核心步骤**:
+
 1. 投资者提交购买申请
 2. 合规检查(投资者资格、投资限额、锁定期)
 3. 投资者支付资金
@@ -839,9 +991,10 @@ async function main() {
 
 ---
 
-### 4.2 DSToken合约详解
+### 4.2 DSToken 合约详解
 
 **核心方法**:
+
 ```solidity
 /**
  * @dev 转账代币(带合规检查)
@@ -867,7 +1020,7 @@ function transfer(address to, uint256 amount) public override returns (bool) {
 
     return true;
 }
-````
+```
 
 ---
 
