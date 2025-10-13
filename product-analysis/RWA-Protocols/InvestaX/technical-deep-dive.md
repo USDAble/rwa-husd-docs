@@ -60,6 +60,69 @@ InvestaX 采用**SaaS 平台 + 合规基础设施架构**:
 -   **Secondary Market**: 二级市场交易
 -   **Liquidity Management**: 流动性管理
 
+#### 1.2.4 系统架构图
+
+```mermaid
+graph TB
+    subgraph "资产层"
+        A1[房地产]
+        A2[私募股权]
+        A3[债券基金]
+        A4[大宗商品]
+    end
+
+    subgraph "法律层"
+        L1[SPV/Trust]
+        L2[托管机构]
+        L3[MAS监管]
+    end
+
+    subgraph "InvestaX平台"
+        P1[资产代币化模块]
+        P2[KYC/AML模块<br/>ComplyCube]
+        P3[智能合约部署]
+        P4[二级市场交易]
+        P5[资产管理与分红]
+    end
+
+    subgraph "区块链层"
+        B1[Ethereum]
+        B2[Polygon]
+        B3[ERC-20代币]
+    end
+
+    subgraph "投资者层"
+        I1[机构投资者]
+        I2[认证投资者]
+        I3[零售投资者]
+    end
+
+    A1 & A2 & A3 & A4 --> L1
+    L1 --> L2
+    L1 --> P1
+    L3 --> P1
+
+    P1 --> P3
+    P2 --> P1
+    P3 --> B1 & B2
+    B1 & B2 --> B3
+
+    B3 --> P4
+    B3 --> P5
+
+    P2 --> I1 & I2 & I3
+    P4 --> I1 & I2 & I3
+    P5 --> I1 & I2 & I3
+
+    style P1 fill:#e1f5ff
+    style P2 fill:#e1f5ff
+    style P3 fill:#e1f5ff
+    style P4 fill:#e1f5ff
+    style P5 fill:#e1f5ff
+    style B3 fill:#ffe1e1
+    style L3 fill:#fff4e1
+```
+
 ---
 
 ### 1.3 官方资源
