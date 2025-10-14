@@ -103,7 +103,27 @@
 
 ---
 
-### 6. RentCustodyContract (房租托管 - 测试版)
+### 6. TradeContract (交易合约 - 测试版)
+
+-   **代理合约**: `0xCCb118EaF2dDc0651De036924eE644c805530164`
+-   **实现合约**: `0x1dB75Ba341fF674F7982e7219cc5515683473508`
+-   **版本**: V9 UUPS 升级支持
+-   **部署时间**: 2025-10-14 11:10 CST
+-   **架构**: UUPS 代理模式
+-   **验证状态**: ✅ 已验证
+-   **区块链浏览器**:
+    -   [代理合约](https://optimistic.etherscan.io/address/0xccb118eaf2ddc0651de036924ee644c805530164)
+    -   [实现合约](https://optimistic.etherscan.io/address/0x1db75ba341ff674f7982e7219cc5515683473508)
+-   **来源 repo**: rwa-husd-trading
+-   **部署区块**: 142,406,503
+-   **外部合约配置**:
+    -   SystemConfig (V9): `0x4b97b05797aAd140bA3cc44a9e009262c80D2035`
+    -   UserRegistry (V9): `0xA4eB54d8160b43732bDCa1559Daf53640B960f49`
+    -   Treasury (V9): `0xC70d4aCE7c34068d4A4E86c321506CC52a6AF2eD`
+
+---
+
+### 7. RentCustodyContract (房租托管 - 测试版)
 
 -   **代理合约**: `0xf64A952e81bbBAa6C8c134e4ceb943dcB59F4772`
 -   **实现合约**: `0xc8916A1c6f7c29eaDCE1ff2631c7fA060438dF0f`
