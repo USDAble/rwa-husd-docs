@@ -143,17 +143,20 @@
 
 ### 8. RentCustodyContract (房租托管 - 测试版)
 
--   **代理合约**: `0xf64A952e81bbBAa6C8c134e4ceb943dcB59F4772`
--   **实现合约**: `0xc8916A1c6f7c29eaDCE1ff2631c7fA060438dF0f`
--   **版本**: v2.2.0
--   **部署时间**: 2025-08-28
+-   **代理合约**: `0x3c50f98974a438E93C20DFda4eF22faBa921b696`
+-   **实现合约**: `0x933270F0a369DBa05bB847f262e9A43f717D5d33`
+-   **版本**: V9 UUPS 升级支持 (v2.2.0)
+-   **部署时间**: 2025-10-14 11:25 CST
 -   **架构**: UUPS 代理模式
 -   **验证状态**: ✅ 已验证
 -   **区块链浏览器**:
-    -   [代理合约](https://optimistic.etherscan.io/address/0xf64a952e81bbbaa6c8c134e4ceb943dcb59f4772)
-    -   [实现合约](https://optimistic.etherscan.io/address/0xc8916A1c6f7c29eaDCE1ff2631c7fA060438dF0f)
--   **来源 repo**: batch-token-transfer
--   **默认支付代币**: `0x6e6Ed6c3B17EbbBb2b1E330C4C2e0974c4782591` (测试 USDC)
+    -   [代理合约](https://optimistic.etherscan.io/address/0x3c50f98974a438e93c20dfda4ef22faba921b696)
+    -   [实现合约](https://optimistic.etherscan.io/address/0x933270f0a369dba05bb847f262e9a43f717d5d33)
+-   **来源 repo**: batch-token-transfer/hardhat-contracts
+-   **部署区块**: 142,406,747
+-   **外部合约配置**:
+    -   SystemConfig (V9): `0x4b97b05797aAd140bA3cc44a9e009262c80D2035`
+    -   Payment Token: `0x6e6Ed6c3B17EbbBb2b1E330C4C2e0974c4782591`
 
 ---
 
