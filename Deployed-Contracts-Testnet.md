@@ -123,7 +123,25 @@
 
 ---
 
-### 7. RentCustodyContract (房租托管 - 测试版)
+### 7. PropertyTokenFactory (房产代币工厂 - 测试版)
+
+-   **代理合约**: `0x542ca6448b5a1207b6aA5BAE8D24483F8e414580`
+-   **实现合约**: `0x3c50f98974a438E93C20DFda4eF22faBa921b696`
+-   **版本**: V9 UUPS 升级支持
+-   **部署时间**: 2025-10-14 11:20 CST
+-   **架构**: UUPS 代理模式
+-   **验证状态**: ⏳ 待验证
+-   **来源 repo**: rwa-husd-contracts
+-   **外部合约配置**:
+    -   SystemConfig (V9): `0x4b97b05797aAd140bA3cc44a9e009262c80D2035`
+    -   UserRegistry (V9): `0xA4eB54d8160b43732bDCa1559Daf53640B960f49`
+    -   Treasury (V9): `0xC70d4aCE7c34068d4A4E86c321506CC52a6AF2eD`
+    -   RedemptionManager (V9): `0x34d4285399AC5aCF90BEDA0a409257b7CeeCE14E`
+    -   PropertyToken Implementation: `0x933270F0a369DBa05bB847f262e9A43f717D5d33`
+
+---
+
+### 8. RentCustodyContract (房租托管 - 测试版)
 
 -   **代理合约**: `0xf64A952e81bbBAa6C8c134e4ceb943dcB59F4772`
 -   **实现合约**: `0xc8916A1c6f7c29eaDCE1ff2631c7fA060438dF0f`
