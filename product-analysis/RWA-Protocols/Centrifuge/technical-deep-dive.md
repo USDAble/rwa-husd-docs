@@ -68,6 +68,94 @@ Centrifuge 采用**Hub-and-Spoke 架构**,实现跨链资产管理:
 -   **Hub 层**: Hub, HubRegistry, ShareClassManager, Accounting, Holdings
 -   **Spoke 层**: Vault (ERC-7540), ShareToken (ERC-20), Escrow, Managers
 
+### 1.2.1 系统架构图
+
+```mermaid
+graph TB
+    subgraph "资产层"
+        A1[发票]
+        A2[应收账款]
+        A3[房地产贷款]
+        A4[其他RWA]
+    end
+
+    subgraph "Hub层 - Centrifuge Chain"
+        H1[Hub<br/>池管理]
+        H2[HubRegistry<br/>注册表]
+        H3[ShareClassManager<br/>份额类别管理]
+        H4[Accounting<br/>资产记账]
+        H5[Holdings<br/>资产持有]
+    end
+
+    subgraph "跨链消息层"
+        X1[Axelar跨链桥]
+        X2[notifyPool消息]
+        X3[notifyShareClass消息]
+    end
+
+    subgraph "Spoke层 - EVM Chains"
+        S1[Vault<br/>ERC-7540]
+        S2[ShareToken<br/>ERC-20]
+        S3[Escrow<br/>托管]
+        S4[Managers<br/>管理器]
+    end
+
+    subgraph "EVM区块链"
+        E1[Ethereum]
+        E2[Base]
+        E3[Arbitrum]
+    end
+
+    subgraph "投资者层"
+        I1[机构投资者]
+        I2[DeFi协议]
+        I3[个人投资者]
+    end
+
+    A1 & A2 & A3 & A4 --> H4
+    H4 --> H5
+    H1 --> H2 & H3 & H4 & H5
+
+    H1 --> X1
+    X1 --> X2 & X3
+    X2 & X3 --> S1
+
+    S1 --> S2 & S3 & S4
+    S1 --> E1 & E2 & E3
+
+    S2 --> I1 & I2 & I3
+    I1 & I2 & I3 --> S1
+
+    style H1 fill:#e1f5ff
+    style H2 fill:#e1f5ff
+    style H3 fill:#e1f5ff
+    style H4 fill:#e1f5ff
+    style H5 fill:#e1f5ff
+    style S1 fill:#4CAF50
+    style S2 fill:#2196F3
+    style X1 fill:#FF9800
+    style E1 fill:#fff4e1
+    style E2 fill:#fff4e1
+    style E3 fill:#fff4e1
+```
+
+**系统架构说明**:
+
+-   **资产层**: 支持发票、应收账款、房地产贷款等多种 RWA 类型
+-   **Hub 层**: Centrifuge Chain(基于 Substrate),负责池管理、权限控制、资产记账
+-   **跨链消息层**: 使用 Axelar 等跨链桥实现 Hub 和 Spoke 之间的消息传递
+-   **Spoke 层**: 部署在 Ethereum、Base、Arbitrum 等 EVM 链,负责投资者交互
+-   **EVM 区块链**: 支持多条 EVM 兼容链,提供流动性和投资者访问
+-   **投资者层**: 支持机构投资者、DeFi 协议和个人投资者
+
+**核心特性**:
+
+-   **Hub-and-Spoke 架构**: 中心化资产管理 + 去中心化投资者访问
+-   **ERC-7540 Async Vault**: 异步 Vault 标准,支持 Epoch 执行机制
+-   **跨链资产管理**: 一个 Pool 可在多条链上部署 Share Classes
+-   **Substrate 技术栈**: Hub 基于 Substrate,高性能、可定制
+-   **多 Tranche 支持**: 支持 Junior/Senior Tranches,满足不同风险偏好
+
 ---
 
 ## 2. 业务流程 1: Pool 创建与 Share Class 部署 ✅ 官方验证

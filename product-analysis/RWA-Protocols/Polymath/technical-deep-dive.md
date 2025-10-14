@@ -59,6 +59,105 @@ Polymath 采用**ST-20/ERC-1400 标准 + Transfer Manager 模块化架构**:
 -   **PolyToken**: POLY 代币 (平台费用)
 -   **FeatureRegistry**: 功能注册表
 
+#### 1.2.4 系统架构图
+
+```mermaid
+graph TB
+    subgraph "资产层"
+        A1[私募证券]
+        A2[房地产]
+        A3[债券]
+        A4[其他资产]
+    end
+
+    subgraph "法律层"
+        L1[SPV/Trust]
+        L2[转让代理]
+        L3[全球证券监管<br/>SEC/MiFID II等]
+    end
+
+    subgraph "Polymath平台"
+        P1[Security Token发行]
+        P2[投资者KYC与白名单]
+        P3[Token转账与合规]
+        P4[分红与公司行动]
+        P5[二级市场交易]
+    end
+
+    subgraph "ST-20/ERC-1400层"
+        ST1[SecurityToken<br/>ST-20/ERC-1400]
+        ST2[SecurityTokenRegistry<br/>代币注册表]
+        ST3[ModuleRegistry<br/>模块注册表]
+    end
+
+    subgraph "Transfer Manager层"
+        TM1[GeneralTransferManager<br/>通用转账管理]
+        TM2[CountTransferManager<br/>投资者数量限制]
+        TM3[PercentageTransferManager<br/>持股比例限制]
+        TM4[VolumeRestrictionTM<br/>交易量限制]
+    end
+
+    subgraph "区块链层"
+        B1[Ethereum]
+        B2[Polygon]
+        B3[ERC-1400代币]
+    end
+
+    subgraph "投资者层"
+        I1[认证投资者]
+        I2[机构投资者]
+        I3[零售投资者<br/>部分司法管辖区]
+    end
+
+    A1 & A2 & A3 & A4 --> L1
+    L1 --> L2
+    L1 --> P1
+    L3 --> P1
+
+    P1 --> ST1
+    P2 --> ST1
+    ST1 --> ST2 & ST3
+    ST3 --> TM1 & TM2 & TM3 & TM4
+    ST1 --> B1 & B2
+    B1 & B2 --> B3
+
+    B3 --> P4
+    B3 --> P5
+
+    P2 --> I1 & I2 & I3
+    P5 --> I1 & I2 & I3
+
+    style P1 fill:#e1f5ff
+    style P2 fill:#e1f5ff
+    style P3 fill:#e1f5ff
+    style P4 fill:#e1f5ff
+    style P5 fill:#e1f5ff
+    style ST1 fill:#4CAF50
+    style TM1 fill:#2196F3
+    style TM2 fill:#FF9800
+    style TM3 fill:#9C27B0
+    style TM4 fill:#F44336
+    style L3 fill:#fff4e1
+```
+
+**系统架构说明**:
+
+-   **资产层**: 支持私募证券、房地产、债券等多种资产类型
+-   **法律层**: SPV/Trust 结构 + 转让代理服务 + 全球证券监管合规
+-   **平台层**: Polymath 核心平台,提供完整的证券代币生命周期管理
+-   **ST-20/ERC-1400 层**: 业界领先的证券代币标准,模块化设计
+-   **Transfer Manager 层**: 灵活的转账管理器系统,支持多种合规规则
+-   **区块链层**: 支持 Ethereum 和 Polygon,基于 ERC-1400 标准
+-   **投资者层**: 支持认证投资者、机构投资者和零售投资者(部分司法管辖区)
+
+**核心特性**:
+
+-   **ST-20/ERC-1400 标准**: 业界领先的证券代币标准,向后兼容 ERC-20
+-   **模块化 Transfer Manager**: 可插拔的转账管理器,支持自定义合规规则
+-   **全球合规**: 支持 SEC、MiFID II 等多国证券法规
+-   **转让代理服务**: 提供完整的股东名册和合规报告
+-   **多链支持**: Ethereum 和 Polygon 双链部署
+
 ---
 
 ### 1.3 官方资源

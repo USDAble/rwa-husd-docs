@@ -109,6 +109,116 @@ Tokeny T-REX 采用**ERC-3643 标准架构**,由以下核心组件构成:
 
 **Claims 类型示例**:
 
+### 1.3.1 系统架构图
+
+```mermaid
+graph TB
+    subgraph "资产层"
+        A1[私募证券]
+        A2[房地产]
+        A3[债券]
+        A4[其他资产]
+    end
+
+    subgraph "法律层"
+        L1[SPV/Trust]
+        L2[转让代理]
+        L3[全球证券监管<br/>SEC/MiFID II等]
+    end
+
+    subgraph "Tokeny T-REX平台"
+        P1[代币部署与配置]
+        P2[投资者身份验证KYC]
+        P3[代币发行与转账]
+        P4[合规检查与限制]
+        P5[代币赎回与销毁]
+    end
+
+    subgraph "ERC-3643核心层"
+        T1[Token Contract<br/>ERC-3643/ERC-20]
+        T2[Identity Registry<br/>身份注册表]
+        T3[Claim Topics Registry<br/>声明主题注册表]
+        T4[Trusted Issuers Registry<br/>可信发行者注册表]
+        T5[Modular Compliance<br/>模块化合规]
+    end
+
+    subgraph "ONCHAINID层"
+        O1[ONCHAINID合约<br/>链上身份]
+        O2[Claims<br/>身份声明]
+        O3[KYC Claim]
+        O4[Accredited Investor Claim]
+        O5[Country Claim]
+    end
+
+    subgraph "区块链层"
+        B1[Ethereum]
+        B2[Polygon]
+        B3[ERC-3643代币]
+    end
+
+    subgraph "投资者层"
+        I1[认证投资者]
+        I2[机构投资者]
+        I3[零售投资者<br/>部分司法管辖区]
+    end
+
+    A1 & A2 & A3 & A4 --> L1
+    L1 --> L2
+    L1 --> P1
+    L3 --> P1
+
+    P1 --> T1
+    P2 --> T2
+    T1 --> T2 & T3 & T4 & T5
+    T2 --> O1
+    O1 --> O2
+    O2 --> O3 & O4 & O5
+
+    T1 --> B1 & B2
+    B1 & B2 --> B3
+
+    B3 --> P4
+    B3 --> P5
+
+    P2 --> I1 & I2 & I3
+    P3 --> I1 & I2 & I3
+
+    style P1 fill:#e1f5ff
+    style P2 fill:#e1f5ff
+    style P3 fill:#e1f5ff
+    style P4 fill:#e1f5ff
+    style P5 fill:#e1f5ff
+    style T1 fill:#4CAF50
+    style T2 fill:#2196F3
+    style T5 fill:#FF9800
+    style O1 fill:#9C27B0
+    style O2 fill:#F44336
+    style L3 fill:#fff4e1
+```
+
+**系统架构说明**:
+
+-   **资产层**: 支持私募证券、房地产、债券等多种资产类型
+-   **法律层**: SPV/Trust 结构 + 转让代理服务 + 全球证券监管合规
+-   **平台层**: Tokeny T-REX 核心平台,提供完整的安全代币生命周期管理
+-   **ERC-3643 核心层**: 5 个核心合约,实现权限化转账和自动化合规
+-   **ONCHAINID 层**: 链上身份管理系统,存储和验证投资者身份声明
+-   **区块链层**: 支持 Ethereum 和 Polygon,基于 ERC-3643 标准
+-   **投资者层**: 支持认证投资者、机构投资者和零售投资者(部分司法管辖区)
+
+**核心特性**:
+
+-   **ERC-3643 标准**: 首个专为安全代币设计的以太坊标准,向后兼容 ERC-20
+-   **ONCHAINID 身份系统**: 去中心化链上身份管理,支持多种身份声明
+-   **权限化转账**: 只有经过验证的投资者才能持有和转移代币
+-   **模块化合规**: 可插拔的合规规则模块,适应不同监管要求
+-   **自动化合规检查**: 每次转账前自动验证身份和合规规则
+-   **多链支持**: Ethereum 和 Polygon 双链部署
+
+---
+
+**Claims 类型示例**:
+
 -   **Topic 1**: KYC 声明 (Know Your Customer)
 -   **Topic 2**: 合格投资者声明 (Accredited Investor)
 -   **Topic 3**: 居住国家声明 (Country of Residence)
