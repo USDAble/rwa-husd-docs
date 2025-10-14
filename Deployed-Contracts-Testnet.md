@@ -125,19 +125,26 @@
 
 ### 7. PropertyTokenFactory (房产代币工厂 - 测试版)
 
--   **代理合约**: `0x542ca6448b5a1207b6aA5BAE8D24483F8e414580`
--   **实现合约**: `0x3c50f98974a438E93C20DFda4eF22faBa921b696`
+-   **代理合约**: `0xc43629fed53e5CdbB5EF15BA2777CC64Daf5b376`
+-   **实现合约**: `0xbA2336E9b0358062C4cC8656e5FaC03aB6cA40aA`
 -   **版本**: V9 UUPS 升级支持
--   **部署时间**: 2025-10-14 11:20 CST
+-   **部署时间**: 2025-10-14 12:00 CST
+-   **部署区块**: 142,413,090
 -   **架构**: UUPS 代理模式
--   **验证状态**: ⏳ 待验证
+-   **验证状态**: ✅ 已验证
+-   **区块链浏览器**:
+    -   [代理合约](https://optimistic.etherscan.io/address/0xc43629fed53e5cdbb5ef15ba2777cc64daf5b376)
+    -   [实现合约](https://optimistic.etherscan.io/address/0xba2336e9b0358062c4cc8656e5fac03ab6ca40aa)
 -   **来源 repo**: rwa-husd-contracts
 -   **外部合约配置**:
     -   SystemConfig (V9): `0x4b97b05797aAd140bA3cc44a9e009262c80D2035`
     -   UserRegistry (V9): `0xA4eB54d8160b43732bDCa1559Daf53640B960f49`
     -   Treasury (V9): `0xC70d4aCE7c34068d4A4E86c321506CC52a6AF2eD`
     -   RedemptionManager (V9): `0x34d4285399AC5aCF90BEDA0a409257b7CeeCE14E`
-    -   PropertyToken Implementation: `0x933270F0a369DBa05bB847f262e9A43f717D5d33`
+    -   PropertyToken Implementation: `0xC07bfa181f372E819182E10C654899E68eD80f62`
+-   **测试代币**:
+    -   PropertyToken 1 (RPT1): `0xaD31ce65341257f9DDcdbAFCb1fc74dE5634f96b`
+    -   PropertyToken 2 (RPT2): `0x5b0A914E8b3BA24A23e57E8Cfe37DbbB7F5e5A05`
 
 ---
 
