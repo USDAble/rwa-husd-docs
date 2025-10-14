@@ -185,6 +185,13 @@ graph TB
 
 **验证方法**: 基于 ERC-1400 标准 + GitHub 官方合约 + 官方文档
 
+**官方 GitHub 资源**:
+
+-   [Polymath Core GitHub 仓库](https://github.com/PolymathNetwork/polymath-core) - 官方 Polymath Core 智能合约仓库 (333 stars, 152 forks)
+-   [SecurityToken.sol](https://github.com/PolymathNetwork/polymath-core/blob/master/contracts/tokens/SecurityToken.sol) - Security Token 核心合约 (Solidity)
+-   [STFactory.sol](https://github.com/PolymathNetwork/polymath-core/blob/master/contracts/STFactory.sol) - Security Token 工厂合约 (Solidity)
+-   [ModuleRegistry.sol](https://github.com/PolymathNetwork/polymath-core/blob/master/contracts/ModuleRegistry.sol) - 模块注册合约 (Solidity)
+
 **资源限制**:
 
 -   ✅ Polymath Core 有完整的 GitHub 仓库和智能合约源代码
@@ -193,8 +200,8 @@ graph TB
 
 **验证策略**:
 
-1. **核心功能**: 基于 GitHub 官方合约验证 → ✅ 基于 GitHub 官方合约
-2. **合规功能**: 基于官方文档验证 → ⚠️ 基于官方文档
+1. **核心功能**: 基于 GitHub 官方合约 + ERC-1400 标准验证 → ✅ 基于 GitHub 官方合约
+2. **合规功能**: 基于 GitHub 官方合约 + 官方文档验证 → ✅ 基于 GitHub 官方合约
 3. **其他功能**: 基于 ERC-1400 标准验证 → ⚠️ 基于 ERC-1400 标准
 
 ---

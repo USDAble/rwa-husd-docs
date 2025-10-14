@@ -149,18 +149,25 @@ graph TB
 
 ### 1.4 验证说明
 
-**验证方法**: 基于行业报告 + R-Token 标准
+**验证方法**: 基于 GitHub 官方合约 + R-Token 标准 + 行业报告
+
+**官方 GitHub 资源**:
+
+-   [Harbor R-Token GitHub 仓库](https://github.com/harborhq/r-token) - 官方 R-Token 智能合约仓库 (146 stars, 60 forks)
+-   [RegulatedToken.sol](https://github.com/harborhq/r-token/blob/master/contracts/RegulatedToken.sol) - R-Token 核心合约 (Solidity)
+-   [RegulatorService.sol](https://github.com/harborhq/r-token/blob/master/contracts/RegulatorService.sol) - 监管服务合约 (Solidity)
+-   [ServiceRegistry.sol](https://github.com/harborhq/r-token/blob/master/contracts/ServiceRegistry.sol) - 服务注册合约 (Solidity)
 
 **资源限制**:
 
--   ⚠️ Harbor 没有公开的 GitHub 仓库
--   ⚠️ R-Token 标准文档有限
+-   ✅ Harbor 有公开的 GitHub 仓库,包含完整的 R-Token 智能合约源代码
+-   ✅ R-Token 标准文档完整,包含详细的技术说明和使用示例
 -   ✅ 行业报告提供了详细的技术说明
 
 **验证策略**:
 
-1. **核心功能**: 基于 R-Token 标准验证 → ⚠️ 基于 R-Token 标准
-2. **合规功能**: 基于行业报告验证 → ⚠️ 基于行业报告
+1. **核心功能**: 基于 GitHub 官方合约 + R-Token 标准验证 → ✅ 基于 GitHub 官方合约
+2. **合规功能**: 基于 GitHub 官方合约 + 行业报告验证 → ✅ 基于 GitHub 官方合约
 3. **其他功能**: 基于 ERC-20 标准验证 → ⚠️ 基于 ERC-20 标准
 
 ---

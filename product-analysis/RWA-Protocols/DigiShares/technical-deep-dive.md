@@ -150,18 +150,26 @@ graph TB
 
 ### 1.4 验证说明
 
-**验证方法**: 基于官方网站
+**验证方法**: 基于官方网站 + 官方文档 + FINRA 监管要求
+
+**官方资源**:
+
+-   [DigiShares 官方网站](https://digishares.io/) - 官方产品说明和技术介绍
+-   [DigiShares 投资者文档](https://digishares.io/wp-content/uploads/2022/12/Digishares-3-Pager-v12-Reg-D.pdf) - 房地产代币化投资者文档
+-   [DigiShares 法律文档库](https://digishares.io/) - 合规和法律文档库
+-   [DigiShares 房地产代币化](https://digishares.io/) - 房地产代币化解决方案
 
 **资源限制**:
 
 -   ⚠️ DigiShares 没有公开的 GitHub 仓库
 -   ⚠️ 智能合约源代码未公开
--   ✅ 官方网站提供了详细的产品说明
+-   ✅ 官方网站提供了详细的产品说明和投资者文档
+-   ✅ 符合 FINRA (美国金融业监管局) 和 Reg D 监管要求
 
 **验证策略**:
 
-1. **核心功能**: 基于官方网站验证 → ⚠️ 基于官方网站
-2. **合规功能**: 基于 FINRA 要求验证 → ⚠️ 基于 FINRA 要求
+1. **核心功能**: 基于官方网站 + 官方文档验证 → ⚠️ 基于官方文档
+2. **合规功能**: 基于 FINRA 要求 + Reg D 验证 → ⚠️ 基于 FINRA 要求
 3. **其他功能**: 基于 ERC-20 标准验证 → ⚠️ 基于 ERC-20 标准
 
 ---

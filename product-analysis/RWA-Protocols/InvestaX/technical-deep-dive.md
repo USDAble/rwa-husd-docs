@@ -145,18 +145,26 @@ graph TB
 
 ### 1.4 验证说明
 
-**验证方法**: 基于官方网站 + 行业报告
+**验证方法**: 基于官方网站 + 官方博客 + 行业报告 + MAS 监管要求
+
+**官方资源**:
+
+-   [InvestaX 官方网站](https://www.investax.io/) - 官方产品说明和技术介绍
+-   [InvestaX 官方博客](https://www.investax.io/blog) - 技术更新和案例研究
+-   [InvestaX PoC 代币化案例](https://www.investax.io/blog/asias-pioneer-digital-securities-offerings-platform-investax-announces-the-completion-of-poc-tokenisation-of-singapore-variable-capital-companies-championed-by-veteran-institutional-firms) - 新加坡 VCC 代币化 PoC
+-   [代币化基金白皮书解读](https://www.investax.io/blog/key-insights-tokenized-fund-the-third-revolution-in-asset-management-decoded-whitepaper) - 资产管理革命白皮书
 
 **资源限制**:
 
 -   ⚠️ InvestaX 没有公开的 GitHub 仓库
 -   ⚠️ 智能合约源代码未公开
--   ✅ 官方网站提供了详细的产品说明
+-   ✅ 官方网站和博客提供了详细的产品说明和技术案例
+-   ✅ 受 MAS (新加坡金融管理局) 监管,合规性有保障
 
 **验证策略**:
 
-1. **核心功能**: 基于官方网站验证 → ⚠️ 基于官方网站
-2. **合规功能**: 基于 MAS 监管要求验证 → ⚠️ 基于 MAS 监管要求
+1. **核心功能**: 基于官方网站 + 官方博客 + 实际案例验证 → ⚠️ 基于官方文档
+2. **合规功能**: 基于 MAS 监管要求 + 官方案例验证 → ⚠️ 基于 MAS 监管要求
 3. **其他功能**: 基于 ERC-20/ERC-1400 标准验证 → ⚠️ 基于 ERC 标准
 
 ---
