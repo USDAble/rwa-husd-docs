@@ -935,21 +935,23 @@ Make
 
 **安装步骤**:
 
+> ⚠️ **注意**: 以下为示例代码,其中的链接和端点为概念设计示例,实际不存在。
+
 ```bash
-# 1. 安装RealChain二进制文件
-git clone https://github.com/realchain/realchain
+# 1. 安装RealChain二进制文件 (示例)
+git clone https://github.com/realchain/realchain  # 示例链接,实际不存在
 cd realchain
 make install
 
 # 2. 初始化节点
 realchaind init <moniker> --chain-id realchain-1
 
-# 3. 下载创世文件
-wget https://raw.githubusercontent.com/realchain/networks/main/realchain-1/genesis.json
+# 3. 下载创世文件 (示例)
+wget https://raw.githubusercontent.com/realchain/networks/main/realchain-1/genesis.json  # 示例链接,实际不存在
 mv genesis.json ~/.realchain/config/
 
-# 4. 配置种子节点
-sed -i 's/seeds = ""/seeds = "seed1@seed1.realchain.io:26656,seed2@seed2.realchain.io:26656"/' ~/.realchain/config/config.toml
+# 4. 配置种子节点 (示例)
+sed -i 's/seeds = ""/seeds = "seed1@seed1.realchain.io:26656,seed2@seed2.realchain.io:26656"/' ~/.realchain/config/config.toml  # 示例端点,实际不存在
 
 # 5. 启动节点
 realchaind start
@@ -970,12 +972,14 @@ realchaind start --home ./realchaind
 
 **SDK 集成示例**:
 
+> ⚠️ **注意**: 以下为示例代码,其中的链接和端点为概念设计示例,实际不存在。
+
 ```javascript
 // JavaScript SDK示例
 import { RealChainClient } from "@realchain/sdk";
 
 const client = new RealChainClient({
-    rpcEndpoint: "https://rpc.realchain.io",
+    rpcEndpoint: "https://rpc.realchain.io", // 示例端点,实际不存在
     chainId: "realchain-1",
 });
 
@@ -1091,6 +1095,8 @@ delegator_reward = block_reward * (1 - community_tax) * (1 - commission_rate) * 
 
 #### F.2 软件升级提案
 
+> ⚠️ **注意**: 以下为示例代码,其中的链接为概念设计示例,实际不存在。
+
 ```json
 {
     "title": "RealChain v2.0升级",
@@ -1098,7 +1104,7 @@ delegator_reward = block_reward * (1 - community_tax) * (1 - commission_rate) * 
     "plan": {
         "name": "v2.0",
         "height": 1000000,
-        "info": "https://github.com/realchain/realchain/releases/tag/v2.0.0"
+        "info": "https://github.com/realchain/realchain/releases/tag/v2.0.0" // 示例链接,实际不存在
     },
     "deposit": "50000000000uable"
 }

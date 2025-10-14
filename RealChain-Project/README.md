@@ -244,9 +244,11 @@ query GetAsset($id: String!) {
 
 **验证者节点**:
 
+> ⚠️ **注意**: 以下为示例代码,其中的链接和端点为概念设计示例,实际不存在。
+
 ```bash
-# 安装RealChain
-git clone https://github.com/realchain/realchain
+# 安装RealChain (示例)
+git clone https://github.com/realchain/realchain  # 示例链接,实际不存在
 cd realchain && make install
 
 # 初始化节点
