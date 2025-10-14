@@ -48,24 +48,62 @@
 
 ### 3. RedemptionManager (赎回管理 - 测试版)
 
--   **代理合约**: `0x0b73cC161afA61d1aBD2c6e0fB1668Ea3e69dBA0`
--   **实现合约**: `0x20aD9DdC6b3Ca02B75C0F50542B8A413897B0302`
--   **版本**: V6.2 (固定总额快照方案)
--   **部署时间**: 2025-08-20
+-   **代理合约**: `0x34d4285399AC5aCF90BEDA0a409257b7CeeCE14E`
+-   **实现合约**: `0xd01b05a2297D0FF931E36a57ed8ad52A19441389`
+-   **版本**: V9 UUPS 升级支持
+-   **部署时间**: 2025-10-14 11:00 CST
 -   **架构**: UUPS 代理模式
 -   **验证状态**: ✅ 已验证
 -   **区块链浏览器**:
-    -   [代理合约](https://optimistic.etherscan.io/address/0x0b73cC161afA61d1aBD2c6e0fB1668Ea3e69dBA0)
-    -   [实现合约](https://optimistic.etherscan.io/address/0x20aD9DdC6b3Ca02B75C0F50542B8A413897B0302)
+    -   [代理合约](https://optimistic.etherscan.io/address/0x34d4285399ac5acf90beda0a409257b7ceece14e)
+    -   [实现合约](https://optimistic.etherscan.io/address/0xd01b05a2297d0ff931e36a57ed8ad52a19441389)
 -   **来源 repo**: redemption-contracts
+-   **部署区块**: 142,406,208
 -   **外部合约配置**:
-    -   SystemConfig (TEST): `0xadA073d6C7E0F7d4Dc518edbfe01DBD4f65ea91E`
-    -   UserRegistry (TEST): `0x35957503d5aDc45bd255897925042831dEa05615`
+    -   SystemConfig (V9): `0x4b97b05797aAd140bA3cc44a9e009262c80D2035`
+    -   UserRegistry (V9): `0xA4eB54d8160b43732bDCa1559Daf53640B960f49`
     -   Payment Token: `0x6e6Ed6c3B17EbbBb2b1E330C4C2e0974c4782591`
 
 ---
 
-### 4. RentCustodyContract (房租托管 - 测试版)
+### 4. Treasury (资金库 - 测试版)
+
+-   **代理合约**: `0xC70d4aCE7c34068d4A4E86c321506CC52a6AF2eD`
+-   **实现合约**: `0xd8c9F76fE4e09Ceb1036Aa874bda9180A7cf8a79`
+-   **版本**: V9 UUPS 升级支持
+-   **部署时间**: 2025-10-14 11:05 CST
+-   **架构**: UUPS 代理模式
+-   **验证状态**: ✅ 已验证
+-   **区块链浏览器**:
+    -   [代理合约](https://optimistic.etherscan.io/address/0xc70d4ace7c34068d4a4e86c321506cc52a6af2ed)
+    -   [实现合约](https://optimistic.etherscan.io/address/0xd8c9f76fe4e09ceb1036aa874bda9180a7cf8a79)
+-   **来源 repo**: treasury-contracts
+-   **部署区块**: 142,406,273
+-   **外部合约配置**:
+    -   SystemConfig (V9): `0x4b97b05797aAd140bA3cc44a9e009262c80D2035`
+
+---
+
+### 5. RedemptionStrategy (赎回策略 - 测试版)
+
+-   **代理合约**: `0x8D5743b821cD07F79Af1C5e543Fe62A80EDddC70`
+-   **实现合约**: `0x178E844b5186E54Ff289D6E6FdAF0CE7c6Ff14db`
+-   **版本**: V9 UUPS 升级支持
+-   **部署时间**: 2025-10-14 11:05 CST
+-   **架构**: UUPS 代理模式
+-   **验证状态**: ✅ 已验证
+-   **区块链浏览器**:
+    -   [代理合约](https://optimistic.etherscan.io/address/0x8d5743b821cd07f79af1c5e543fe62a80edddc70)
+    -   [实现合约](https://optimistic.etherscan.io/address/0x178e844b5186e54ff289d6e6fdaf0ce7c6ff14db)
+-   **来源 repo**: treasury-contracts
+-   **部署区块**: 142,406,273
+-   **外部合约配置**:
+    -   RedemptionManager (V9): `0x34d4285399AC5aCF90BEDA0a409257b7CeeCE14E`
+    -   Treasury (V9): `0xC70d4aCE7c34068d4A4E86c321506CC52a6AF2eD`
+
+---
+
+### 6. RentCustodyContract (房租托管 - 测试版)
 
 -   **代理合约**: `0xf64A952e81bbBAa6C8c134e4ceb943dcB59F4772`
 -   **实现合约**: `0xc8916A1c6f7c29eaDCE1ff2631c7fA060438dF0f`
