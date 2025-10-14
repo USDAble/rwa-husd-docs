@@ -160,22 +160,6 @@
 
 ---
 
-### 5. TradeContract (二级市场交易 - 测试版)
-
--   **代理合约**: `0xeb2A3CA953FFdde684187fA800552F9b5E2798C7`
--   **实现合约**: `0x330125bEEe51DE0945c7052A5a9604b78Ea50f3b`
--   **版本**: v1.1.0-security-enhanced
--   **架构**: UUPS 代理模式
--   **验证状态**: ✅ 已验证
--   **区块链浏览器**:
-    -   [代理合约](https://optimistic.etherscan.io/address/0xeb2a3ca953ffdde684187fa800552f9b5e2798c7)
-    -   [实现合约](https://optimistic.etherscan.io/address/0x330125bEEe51DE0945c7052A5a9604b78Ea50f3b)
--   **来源 repo**: rwa-husd-trading
--   **用途**: 安全测试
--   **安全级别**: 🛡️ 增强
-
----
-
 ### 6. AbleVestingFactory (代币释放工厂 - 测试版)
 
 -   **合约地址**: `0x7d902625397446FA4331a03Fc7275bAbf86637fc`
