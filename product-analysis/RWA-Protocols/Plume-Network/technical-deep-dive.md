@@ -169,14 +169,24 @@ graph TB
 **资源限制**:
 
 -   ⚠️ Plume Network 是新兴项目,部分技术细节可能仍在开发中
+-   ✅ 官方 GitHub 组织: [https://github.com/plumenetwork](https://github.com/plumenetwork)
+-   ✅ 开源项目: contracts (Plume 合约 Monorepo), plume-nitro (Nitro 分叉), plume-go-ethereum (Go-Ethereum 分叉)
 -   ⚠️ 官方文档可能不如成熟项目完整
 -   ✅ 官方文档提供了清晰的架构说明
+-   ✅ 基于 Optimism Stack 构建,继承 Optimism 的成熟技术
 
 **验证策略**:
 
-1. **核心功能** (Arc, Nest): 基于官方文档验证 → ⚠️ 基于官方文档
+1. **核心功能** (Arc, Nest): 基于官方文档 + GitHub 开源代码验证 → ⚠️ 基于官方文档 + GitHub
 2. **DeFi 功能**: 基于官方文档验证 → ⚠️ 基于官方文档
-3. **其他功能**: 基于 Optimism 标准验证 → ⚠️ 基于 Optimism 标准
+3. **其他功能**: 基于 Optimism 标准 + GitHub 代码验证 → ⚠️ 基于 Optimism 标准 + GitHub
+
+**官方 GitHub 资源**:
+
+-   [Plume Network GitHub 组织](https://github.com/plumenetwork) - 官方 GitHub 组织,包含多个开源项目
+-   [contracts](https://github.com/plumenetwork/contracts) - Plume 合约 Monorepo (Solidity, 23 stars)
+-   [plume-nitro](https://github.com/plumenetwork/plume-nitro) - Plume Nitro (基于 Arbitrum Nitro 分叉)
+-   [plume-go-ethereum](https://github.com/plumenetwork/plume-go-ethereum) - Plume Go-Ethereum (基于 Go-Ethereum 分叉)
 
 ---
 

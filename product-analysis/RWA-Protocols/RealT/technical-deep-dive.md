@@ -235,15 +235,24 @@ graph TB
 
 **资源限制**:
 
--   ⚠️ RealT 没有公开的官方智能合约源代码仓库
+-   ⚠️ RealT 没有公开的官方智能合约源代码仓库(核心合约未开源)
+-   ✅ 官方 GitHub 组织: [https://github.com/real-token](https://github.com/real-token)
+-   ✅ 开源项目: realtoken-yam-core (YAM 智能合约), realtoken-yam-interface (YAM 界面)
 -   ⚠️ 白皮书发布于 2019 年,部分技术细节可能已更新
 -   ✅ Medium 官方博客提供了最新的 DeFi 功能说明(2023-2024)
+-   ✅ 代币合约地址可在 Etherscan 和 Gnosisscan 上查看
 
 **验证策略**:
 
-1. **核心功能** (RealToken, RentDistribution): 基于白皮书验证 → ⚠️ 基于白皮书(2019)
-2. **DeFi 功能** (RMM, Yam): 基于 Medium 文章验证 → ⚠️ 基于 Medium 文章(2024)
-3. **其他功能**: 基于 ERC-20 标准验证 → ⚠️ 基于 ERC-20 标准
+1. **核心功能** (RealToken, RentDistribution): 基于白皮书 + 链上合约地址验证 → ⚠️ 基于白皮书(2019) + 链上验证
+2. **DeFi 功能** (RMM, Yam): 基于 Medium 文章 + GitHub 开源代码验证 → ⚠️ 基于 Medium 文章(2024) + GitHub
+3. **其他功能**: 基于 ERC-20 标准 + 链上合约验证 → ⚠️ 基于 ERC-20 标准 + 链上验证
+
+**官方 GitHub 资源**:
+
+-   [RealT GitHub 组织](https://github.com/real-token) - 官方 GitHub 组织,包含多个开源项目
+-   [realtoken-yam-core](https://github.com/real-token/realtoken-yam-core) - RealToken YAM 智能合约 (Solidity)
+-   [realtoken-yam-interface](https://github.com/real-token/realtoken-yam-interface) - RealToken YAM 界面 (TypeScript)
 
 ---
 
