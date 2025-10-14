@@ -1,8 +1,16 @@
 # RealChain: 下一代 RWA 专用区块链基础设施
 
-**技术白皮书 v1.0**  
-**发布日期**: 2025 年 1 月  
-**文档版本**: 1.0
+**技术白皮书 v1.0 (概念设计示例)**
+**创建日期**: 2025 年 10 月 9 日
+**文档版本**: 1.1
+
+> ⚠️ **重要声明**: 本文档为概念设计示例,用于学习和参考目的。
+>
+> -   **RealChain 不是一个真实存在的区块链项目**
+> -   文档基于真实的技术栈(Cosmos SDK, Tendermint)进行概念设计
+> -   所有"官方"联系方式和网站链接均为示例,不可访问
+> -   文档创建时间: 2025-10-09
+> -   文档用途: 展示如何设计 RWA 专用区块链的学习材料
 
 ---
 
@@ -1201,18 +1209,32 @@ delegator_reward = block_reward * (1 - community_tax) * (1 - commission_rate) * 
 
 ---
 
-## 📞 联系信息
+## 📚 参考资源
 
-**官方网站**: https://realchain.io
-**技术文档**: https://docs.realchain.io
-**GitHub**: https://github.com/realchain
-**Discord**: https://discord.gg/realchain
-**Telegram**: https://t.me/realchain
-**Twitter**: https://twitter.com/realchain_io
+本概念设计文档基于以下真实技术栈:
 
-**商务合作**: business@realchain.io
-**技术支持**: support@realchain.io
-**媒体咨询**: media@realchain.io
+**核心技术**:
+
+-   Cosmos SDK: https://docs.cosmos.network
+-   Tendermint: https://docs.tendermint.com
+-   IBC 协议: https://ibc.cosmos.network
+-   IPFS: https://ipfs.io
+
+**RWA 参考项目**:
+
+-   Tokeny T-REX: https://tokeny.com
+-   Securitize: https://securitize.io
+-   Centrifuge: https://centrifuge.io
+-   RealT: https://realt.co
+-   Plume Network: https://plumenetwork.xyz
+
+**文档信息**:
+
+-   创建时间: 2025-10-09
+-   最后更新: 2025-10-14
+-   文档类型: 概念设计示例
+-   用途: 学习和参考
+-   仓库: rwa-husd-docs
 
 ---
 
