@@ -1,10 +1,11 @@
 # Plume Network 业务流程与技术实现深度解析
 
-**文档版本**: v2.0
+**文档版本**: v2.1
 **创建时间**: 2025-10-13 12:20:00 CST
+**更新时间**: 2025-10-14 09:05:00 CST
 **文档类型**: 业务流程导向的技术深度解析
 **定位**: RWA 专用 Layer 2 区块链
-**信息来源**: Plume Network 官方文档 (https://docs.plume.org/)
+**信息来源**: Plume Network 官方文档 + GitHub + Optimism 标准
 
 ---
 

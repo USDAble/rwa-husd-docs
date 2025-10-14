@@ -1,10 +1,11 @@
 # InvestaX 业务流程与技术实现深度解析
 
-**文档版本**: v1.0  
-**创建时间**: 2025-10-13 21:45:00 CST  
-**文档类型**: 业务流程导向的技术深度解析  
-**定位**: Singapore-Licensed Tokenization SaaS Platform  
-**信息来源**: InvestaX 官方网站 (https://www.investax.io/)
+**文档版本**: v2.1
+**创建时间**: 2025-10-13 21:45:00 CST
+**更新时间**: 2025-10-14 09:05:00 CST
+**文档类型**: 业务流程导向的技术深度解析
+**定位**: Singapore-Licensed Tokenization SaaS Platform
+**信息来源**: InvestaX 官方网站 + 官方博客 + MAS 监管要求
 
 ---
 

@@ -1,10 +1,11 @@
 # Harbor 业务流程与技术实现深度解析
 
-**文档版本**: v1.0  
-**创建时间**: 2025-10-13 21:52:00 CST  
-**文档类型**: 业务流程导向的技术深度解析  
-**定位**: R-Token Standard Compliance Platform  
-**信息来源**: STOwise (https://stowise.com/company/harbor/)
+**文档版本**: v2.1
+**创建时间**: 2025-10-13 21:52:00 CST
+**更新时间**: 2025-10-14 09:05:00 CST
+**文档类型**: 业务流程导向的技术深度解析
+**定位**: R-Token Standard Compliance Platform
+**信息来源**: GitHub 官方合约 + R-Token 标准 + 行业报告
 
 ---
 
