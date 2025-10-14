@@ -1,10 +1,18 @@
 # Securitize 业务流程与技术实现深度解析
 
-**文档版本**: v2.0
+**文档版本**: v2.1
 **创建时间**: 2025-10-13 12:00:00 CST
+**更新时间**: 2025-10-14 09:00:00 CST
 **文档类型**: 业务流程导向的技术深度解析
 **定位**: 机构级数字证券平台
-**信息来源**: Securitize 官方文档 (https://securitize.io/)
+**信息来源**: Securitize 官方文档 (https://securitize.io/) + GitHub 官方合约
+
+**官方 GitHub 资源**:
+
+-   [Securitize GitHub 组织](https://github.com/securitize-io) - 官方 GitHub 组织
+-   [DSTokenInterfaces](https://github.com/securitize-io/DSTokenInterfaces) - DS Protocol 数字证券接口 (Solidity)
+-   [onChainID](https://github.com/securitize-io/onChainID) - 链上身份验证智能合约 (Solidity)
+-   [DS Protocol Medium](https://medium.com/securitize/introducing-ds-digital-securities-protocol-securitizes-digital-ownership-architecture-for-4bcb6a9c4a16) - DS Protocol 官方介绍
 
 ---
 

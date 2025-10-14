@@ -1,10 +1,18 @@
 # Centrifuge 业务流程与技术实现深度解析
 
-**文档版本**: v2.0
+**文档版本**: v2.1
 **创建时间**: 2025-10-13 10:20:00 CST
+**更新时间**: 2025-10-14 09:00:00 CST
 **文档类型**: 业务流程导向的技术深度解析
-**信息来源**: Centrifuge 官方文档 (https://docs.centrifuge.io/)
+**信息来源**: Centrifuge 官方文档 (https://docs.centrifuge.io/) + GitHub 官方合约
 **备份文档**: technical-deep-dive-backup-20251013-101816.md
+
+**官方 GitHub 资源**:
+
+-   [Centrifuge GitHub 组织](https://github.com/centrifuge) - 官方 GitHub 组织
+-   [Tinlake 智能合约](https://github.com/centrifuge/tinlake) - Tinlake 链上证券化协议智能合约 (Solidity)
+-   [Centrifuge Protocol](https://github.com/centrifuge/protocol) - Centrifuge 协议核心合约 (Solidity)
+-   [Centrifuge Chain](https://github.com/centrifuge/centrifuge-chain) - Centrifuge Layer-1 区块链 (Substrate/Rust)
 
 ---
 

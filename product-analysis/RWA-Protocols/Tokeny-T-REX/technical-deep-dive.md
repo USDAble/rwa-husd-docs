@@ -1,10 +1,18 @@
 # Tokeny T-REX 业务流程与技术实现深度解析
 
-**文档版本**: v2.0
+**文档版本**: v2.1
 **创建时间**: 2025-10-13 11:35:00 CST
+**更新时间**: 2025-10-14 09:00:00 CST
 **文档类型**: 业务流程导向的技术深度解析
 **标准**: ERC3643（安全代币标准）
-**信息来源**: Tokeny 官方文档 (https://docs.tokeny.com/)
+**信息来源**: Tokeny 官方文档 (https://docs.tokeny.com/) + GitHub 官方合约
+
+**官方 GitHub 资源**:
+
+-   [Tokeny Solutions GitHub 组织](https://github.com/TokenySolutions) - 官方 GitHub 组织
+-   [T-REX 智能合约](https://github.com/TokenySolutions/T-REX) - T-REX EIP-3643 智能合约套件 (Solidity)
+-   [EIP-3643 标准](https://eips.ethereum.org/EIPS/eip-3643) - 官方 EIP-3643 标准文档
+-   [T-REX License](https://github.com/TokenySolutions/T-REX/blob/master/LICENSE.md) - T-REX 开源许可证
 
 ---
 
