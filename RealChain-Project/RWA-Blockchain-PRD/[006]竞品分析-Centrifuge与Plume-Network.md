@@ -39,22 +39,32 @@
 
 Centrifuge 专注于 **结构化信贷市场的代币化**,核心业务包括:
 
-1. **信贷资产代币化**
+**重要说明**: Centrifuge 已从旧版 Tinlake 系统升级到 **Centrifuge v3** 新架构。本文档描述的是 Centrifuge v3 的功能和架构。
+
+1. **信贷资产代币化 (Centrifuge v3)**
 
     - 将房地产贷款、应收账款、发票等信贷资产代币化
     - 为资产发行方提供融资渠道
     - 为投资者提供稳定收益的 RWA 投资机会
 
-2. **Tinlake 资产池管理**
+2. **资产池管理 (Centrifuge v3)**
 
     - 创建和管理资产池 (Asset Pools)
-    - 支持高级/次级份额 (Senior/Junior Tranches)
+    - 支持多层级份额 (Multi-Tranche Structure)
     - 自动化利息分配和本金偿还
+    - 采用 Hub-and-Spoke 架构,支持跨链投资
 
 3. **Centrifuge Prime (机构级服务)**
+
     - 为机构投资者提供合规的 RWA 投资通道
     - 支持 KYC/AML 合规流程
     - 提供链上信用评分和风险评估
+
+**架构演进**:
+
+-   **Tinlake (旧版)**: 基于以太坊的智能合约系统,已被替代
+-   **Centrifuge v3 (新版)**: 基于 Substrate 的 Polkadot Parachain,采用 Hub-and-Spoke 架构
+-   **Plume 集成**: 2025 年 1 月 31 日,Plume 成为首个集成 Centrifuge v3 的区块链
 
 #### 2.1.2 目标用户
 
