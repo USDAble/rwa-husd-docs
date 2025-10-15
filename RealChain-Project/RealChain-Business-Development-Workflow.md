@@ -334,6 +334,7 @@ genesis:
 
 #### 模块结构
 
+```
 x/blog/
 ├── keeper/
 │ ├── keeper.go # Keeper 实现
@@ -348,9 +349,6 @@ x/blog/
 │ └── cli/ # CLI 命令
 ├── module.go # 模块定义
 └── genesis.go # 创世逻辑
-
-```
-
 ```
 
 #### 详细步骤
