@@ -272,36 +272,51 @@ realchain/
 version: 1
 
 build:
-  proto:
-    path: proto
-    third_party_paths:
-      - third_party/proto
-      - proto_vendor
+    proto:
+        path: proto
+        third_party_paths:
+            - third_party/proto
+            - proto_vendor
 
 accounts:
-  - name: alice
-    coins:
-      - 100000000000able
-      - 100000000stake
-  - name: bob
-    coins:
-      - 50000000000able
-      - 50000000stake
+    - name: alice
+      coins:
+          - 100000000000able
+          - 100000000stake
+    - name: bob
+      coins:
+          - 50000000000able
+          - 50000000stake
 
 validator:
-  name: alice
-  staked: 100000000stake
+    name: alice
+    staked: 100000000stake
 
 faucet:
-  name: bob
-  coins:
-    - 5000000able
-    - 100000stake
+    name: bob
+    coins:
+        - 5000000able
+        - 100000stake
 
 genesis:
-  chain_id: realchain-1
-  app_state:
-    staking:
+    chain_id: realchain-1
+    app_state:
+        staking:
+            params:
+                bond_denom: stake
+```
+
+**说明**:
+
+-   `accounts`: 预配置的账户和余额
+-   `validator`: 验证者配置
+-   `faucet`: 水龙头配置 (用于测试网)
+-   `genesis.chain_id`: 链 ID (必须唯一)
+
+**参考资源**: https://docs.ignite.com/references/config
+
+---
+
 ### 2.2 核心模块开发流程
 
 #### 流程概述
@@ -309,6 +324,7 @@ genesis:
 核心模块开发是 Cosmos SDK 区块链开发的核心环节。本节以开发一个简单的 **Blog 模块**为例,展示完整的模块开发流程。
 
 **目标**:
+
 -   理解 Cosmos SDK 模块结构
 -   掌握 Keeper、Msg、Handler 的开发
 -   学会编写单元测试
@@ -335,7 +351,7 @@ x/blog/
 
 ```
 
-````
+```
 
 #### 详细步骤
 
@@ -350,7 +366,7 @@ ignite scaffold message create-post title content --module blog
 
 # 创建查询类型 (查询文章)
 ignite scaffold query post id --module blog
-````
+```
 
 **参考资源**: https://docs.ignite.com/guide/blog/intro
 
