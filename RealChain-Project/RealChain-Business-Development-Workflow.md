@@ -318,8 +318,6 @@ genesis:
 
 #### 模块结构
 
-```
-
 x/blog/
 ├── keeper/
 │ ├── keeper.go # Keeper 实现
@@ -334,6 +332,8 @@ x/blog/
 │ └── cli/ # CLI 命令
 ├── module.go # 模块定义
 └── genesis.go # 创世逻辑
+
+```
 
 ````
 
@@ -656,6 +656,7 @@ realchaind query blog post <post-id>
     - 便于前端监听和索引
 
 4. **测试覆盖**:
+
     - 编写单元测试覆盖所有功能
     - 测试正常流程和异常情况
     - 使用表驱动测试提高效率
