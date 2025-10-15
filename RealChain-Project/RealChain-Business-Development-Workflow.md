@@ -70,7 +70,7 @@
 
 #### 架构概览
 
-RealChain 是一个基于 **Cosmos SDK** 构建的模块化公链,专门为 RWA (Real World Assets) 资产代币化而优化。
+RealChain 是一个基于 **Cosmos SDK** 构建的模块化通用公链,支持通过扩展模块实现 RWA (Real World Assets) 资产代币化等业务功能。
 
 ```
 RealChain 架构
@@ -666,7 +666,6 @@ realchaind query blog post <post-id>
 -   **Cosmos SDK 模块开发**: https://docs.cosmos.network/main/build/building-modules/intro
 -   **Keeper 设计模式**: https://docs.cosmos.network/main/build/building-modules/keeper
 -   **消息处理**: https://docs.cosmos.network/main/build/building-modules/msg-services
--   **消息处理**: https://docs.cosmos.network/main/build/building-modules/msg-services
 -   **单元测试**: https://docs.cosmos.network/main/build/building-modules/testing
 
 ---
@@ -677,7 +676,7 @@ realchaind query blog post <post-id>
 
 #### 流程概述
 
-RWA (Real World Assets) 模块是 RealChain 的核心扩展模块,用于管理实物资产的代币化。本节展示如何开发一个完整的 RWA 模块。
+RWA (Real World Assets) 模块是 RealChain 的扩展模块示例,用于管理实物资产的代币化。本节展示如何开发一个完整的 RWA 模块。
 
 **目标**:
 
