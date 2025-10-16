@@ -83,19 +83,70 @@ USDable
 合规目标：ERC-3643 全量实现；3 级 KYC；5
 大司法辖区（US/EU/UK/SG/HK）最小合规基线。
 
-1\. **术语缩写**
+## 1. 术语与缩写
 
-**RWA**: Real-World Assets；**SPV**: Special Purpose Vehicle
+### 1.1 核心术语
 
-**DID/VC**: Decentralized Identifier / Verifiable Credential
+| 术语     | 英文全称                | 中文说明                                              |
+| -------- | ----------------------- | ----------------------------------------------------- |
+| **RWA**  | Real-World Assets       | 真实世界资产,包括房地产、艺术品、股票、债券、收藏品等 |
+| **SPV**  | Special Purpose Vehicle | 特殊目的实体,用于资产隔离和风险管理                   |
+| **ABLE** | -                       | 平台代币,用作 Gas/治理/质押                           |
+| **pUSD** | -                       | 生态稳定币 (示例)                                     |
+| **NAV**  | Net Asset Value         | 资产净值,用于 RWA 资产估值                            |
+| **TVL**  | Total Value Locked      | 总锁仓价值                                            |
 
-**DA**: Data Availability（EigenDA/Celestia/ETH calldata）
+### 1.2 区块链技术术语
 
-**PBS**: Proposer-Builder Separation；**IL**: Inclusion List（强制包含）
+| 术语    | 英文全称                        | 中文说明                                   |
+| ------- | ------------------------------- | ------------------------------------------ |
+| **EVM** | Ethereum Virtual Machine        | 以太坊虚拟机,本链 100% 兼容                |
+| **PoS** | Proof of Stake                  | 权益证明共识机制                           |
+| **BFT** | Byzantine Fault Tolerance       | 拜占庭容错,用于最终性保证                  |
+| **DA**  | Data Availability               | 数据可用性 (EigenDA/Celestia/ETH calldata) |
+| **PBS** | Proposer-Builder Separation     | 提议者-构建者分离                          |
+| **IL**  | Inclusion List                  | 强制包含列表,用于抗审查                    |
+| **MEV** | Miner/Maximal Extractable Value | 矿工/最大可提取价值                        |
+| **FN**  | Full Node                       | 全节点,存储最近状态                        |
+| **AN**  | Archive Node                    | 归档节点,存储完整历史                      |
 
-**FN/AN**: Full/Archive Node；**MEV**: Miner/Maximal Extractable Value
+### 1.3 合规与身份术语
 
-**pUSD**: 生态稳定币（示例）；**ABLE**: 平台代币（Gas/治理/质押）
+| 术语         | 英文全称                           | 中文说明                        |
+| ------------ | ---------------------------------- | ------------------------------- |
+| **DID**      | Decentralized Identifier           | 去中心化身份标识符              |
+| **VC**       | Verifiable Credential              | 可验证凭证,用于 KYC/AML         |
+| **KYC**      | Know Your Customer                 | 了解你的客户,身份验证流程       |
+| **AML**      | Anti-Money Laundering              | 反洗钱                          |
+| **OFAC**     | Office of Foreign Assets Control   | 美国外国资产控制办公室,制裁名单 |
+| **GDPR**     | General Data Protection Regulation | 欧盟通用数据保护条例            |
+| **ERC-3643** | -                                  | 以太坊 RWA 代币标准             |
+
+### 1.4 金融协议术语
+
+| 术语      | 英文全称                     | 中文说明         |
+| --------- | ---------------------------- | ---------------- |
+| **DEX**   | Decentralized Exchange       | 去中心化交易所   |
+| **AMM**   | Automated Market Maker       | 自动做市商       |
+| **TWAP**  | Time-Weighted Average Price  | 时间加权平均价格 |
+| **CLAMM** | Concentrated Liquidity AMM   | 集中流动性 AMM   |
+| **LTV**   | Loan-to-Value                | 贷款价值比       |
+| **CDP**   | Collateralized Debt Position | 抵押债务头寸     |
+
+### 1.5 技术实现术语
+
+| 术语     | 英文全称                             | 中文说明                      |
+| -------- | ------------------------------------ | ----------------------------- |
+| **DSL**  | Domain-Specific Language             | 领域特定语言,用于合规策略定义 |
+| **UUPS** | Universal Upgradeable Proxy Standard | 通用可升级代理标准            |
+| **HSM**  | Hardware Security Module             | 硬件安全模块,用于密钥管理     |
+| **KMS**  | Key Management Service               | 密钥管理服务                  |
+| **TSS**  | Threshold Signature Scheme           | 门限签名方案                  |
+| **MPC**  | Multi-Party Computation              | 多方计算                      |
+| **RTO**  | Recovery Time Objective              | 恢复时间目标                  |
+| **RPO**  | Recovery Point Objective             | 恢复点目标                    |
+| **SLO**  | Service Level Objective              | 服务级别目标                  |
+| **SRE**  | Site Reliability Engineering         | 站点可靠性工程                |
 
 链总体设计目标与边界
 
