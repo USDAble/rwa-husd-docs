@@ -14,10 +14,10 @@
 
 围绕这个原则，在现有 RWA-HUSD 合约架构基础上，建议重点增加 **3～4 个合约/模块**：
 
-1. `AssetRegistry`（资产登记合约） ✅ 上链  
-2. `ComplianceRegistry`（合规 / KYC 状态合约） ✅ 上链  
-3. `InstitutionRegistry`（机构身份 + 质押映射，可复用/扩展现有 StakingAuthorization） ✅ 上链  
-4. （可选）扩展 `RentCustodyContract` 或新建 `CashflowManager` 管理租金分红逻辑 ✅ 上链  
+- **使用现有 `serverId` 直接作为 `assetId`**：`bytes32` 传入链上即可，无需新增资产登记合约或额外 ID 体系。  
+- **核心合约是合规入口**：`ComplianceRegistry`（等同于 UserRegistry V2 + 模块化合规框架），统一承载 KYC/KYB 校验、风险分级与合规模块。  
+- **资产登记与机构管理系统作为未来可选扩展**：`AssetRegistry` / `InstitutionRegistry` 仅在后续需要更强资产生命周期或机构质押管理时再接入，详见 Section 6。  
+- **租金/分红扩展保持可选**：在现有 `RentCustodyContract` 基础上按需增强，保持与核心合规设计解耦。  
 
 ---
 
@@ -222,213 +222,9 @@ require(complianceRegistry.isAllowedToInvest(msg.sender), "KYC_REQUIRED");
 
 ---
 
-## 3. 建议新增 / 扩展的合约设计
+## 3. 统一合规入口详细设计（基于 ERC3643）
 
-### 3.1 新合约：`AssetRegistry`
-
-**目标：** 在链上管理「资产生命周期的关键结果」，并与 `PropertyToken` 绑定。
-
-**核心数据结构示例：**
-
-```solidity
-struct AssetInfo {
-    bytes32 assetId;            // 业务侧 assetId 的 keccak
-    address propertyToken;      // 对应的 PropertyToken 合约
-    uint8 status;               // 枚举: 0 Draft, 1 ApprovedForToken, 2 OnchainActive, 3 Frozen, 4 Redeemed, 5 Defaulted
-    bytes32 legalOpinionHash;   // 律师意见文书 hash/IPFS CID
-    bytes32 valuationReportHash;// 评估报告 hash
-    bytes32 titleDeedHash;      // 核心确权文件 hash
-    uint256 lastValuation;      // 最近一次估值数值
-    uint64 valuationTime;       // 估值时间
-    address valuationProvider;  // 评估机构地址
-    address legalProvider;      // 律师事务所地址
-}
-```
-
-**关键函数：**
-
-- `registerAsset(bytes32 assetId, address legalProvider)`  
-  - 只能由 SAAS 后端 / 节点角色调用（`onlySystemOrNode`）  
-- `setLegalApproved(bytes32 assetId, bytes32 legalOpinionHash, bool approved)`  
-- `setValuation(bytes32 assetId, bytes32 valuationReportHash, uint256 value, address provider)`  
-- `setStatus(bytes32 assetId, Status newStatus)`  
-- `bindPropertyToken(bytes32 assetId, address propertyToken)`  
-
-**与现有合约的关系：**
-
-- `PropertyTokenFactory.createPropertyToken(...)` 新增参数 `bytes32 assetId`：  
-  - 内部逻辑：  
-    - `AssetRegistry.status(assetId)` 必须为 `APPROVED_FOR_TOKENIZATION`  
-    - 创建成功后调用 `AssetRegistry.bindPropertyToken(assetId, tokenAddress)`  
-    - 将 `status` 改为 `ONCHAIN_ACTIVE`  
-- `PropertyToken` 内部保存 `bytes32 public assetId;`，便于其他合约查询  
-- `RedemptionManager`、`RentCustodyContract`、`Treasury` 可以基于 `assetId` 做资产粒度管理，而不只依赖 token 地址。
-
-补充说明：`AssetRegistry` 将 `assetId` 与 `PropertyToken` 以及 ApprovedForTokenization → OnchainActive → Frozen → Redeemed/Defaulted 的状态机强绑定，上链记录每个状态的结果与时间戳，对应覆盖了 2.4 缺口 1（资产生命周期管理），让 SAAS 资产审批、发行、冻结、违约状态在链上可验证且与投资端逻辑同步。
-
----
-
-### 3.2 新合约：`ComplianceRegistry`（KYC/合规状态）
-
-**目标：** 为交易、赎回、分红等需要合规的操作提供统一 KYC 校验点。
-
-**数据结构示例：**
-
-```solidity
-struct ComplianceInfo {
-    bool kycPassed;       // 是否通过KYC/KYB
-    uint8 riskLevel;      // 0 Normal, 1 Medium, 2 High
-    uint64 lastUpdated;   // 更新时间
-}
-```
-
-**核心函数：**
-
-- `setKycStatus(address user, bool passed, uint8 riskLevel)`  
-  - 由后台多签 / 合规专用 Role 调用  
-- `isAllowedToInvest(address user) returns (bool)`  
-- `isAllowedToRedeem(address user) returns (bool)`  
-
-**对现有合约的影响：**
-
-- `TradeContract`：  
-  在 `createSellOrder / createBuyOrder / buyOrder / sellOrder` 等入口增加校验：
-
-  ```solidity
-  require(complianceRegistry.isAllowedToInvest(msg.sender), "KYC_REQUIRED");
-  ```
-
-- `RedemptionManager`：  
-  在 `redeem(...)` 中增加：
-
-  ```solidity
-  require(complianceRegistry.isAllowedToRedeem(msg.sender), "KYC_REQUIRED");
-  ```
-
-- 其他如领取大额分红等操作也可按需接入该校验。
-
----
-
-### 3.3 扩展 / 抽象：`StakingAuthorization` → `InstitutionRegistry`
-
-现有架构中已经有 `AbleToken` + `StakingAuthorization` 做机构质押与授权。建议：
-
-**新增机构维度信息：**
-
-```solidity
-enum InstitutionType { Unknown, LawFirm, AppraisalFirm, NodeOperator, PropertyManager }
-
-struct Institution {
-    InstitutionType institutionType;
-    uint256 stakedAmount;      // ABLE 质押数量
-    bool active;
-    bytes32 metadataHash;      // 对应 SAAS 层机构表的 hash
-}
-```
-
-**提供查询接口：**
-
-- `isActiveInstitution(address)`  
-- `isLawFirm(address)` / `isAppraisalFirm(address)` / `isNodeOperator(address)` 等便捷方法  
-
-**对现有合约的影响：**
-
-- 在 `AssetRegistry` 中设置 `legalProvider` / `valuationProvider` / `nodeOperator` 时：  
-  - 要求对应地址在 `InstitutionRegistry` 中 `active == true`，且类型匹配。  
-- `PropertyTokenFactory`：  
-  - 创建资产类 token 时要求调用方为某类机构（如 NodeOperator）或平台管理员。  
-- 与现有 `StakingAuthorization` 的兼容：  
-  - 可通过 UUPS 升级扩展存储，不破坏现有接口；  
-  - 或新增独立 `InstitutionRegistry` 合约，由老合约引用。  
-
----
-
-### 3.4 租金 / 分红：扩展 `RentCustodyContract` 或新建 `CashflowManager`
-
-结合 SAAS 中的「租金缴纳」「资产运营看板」「托管列表」，以及现有 `Treasury` + 租金托管合约的设计，建议：
-
-**合约层保留 / 增加：**
-
-- 按 `assetId` 维度管理余额，而不仅仅是 token：
-
-  ```solidity
-  mapping(bytes32 => HouseBalance) public houseBalances;
-  ```
-
-- 分发时增加事件：
-
-  ```solidity
-  event RentDistributed(bytes32 indexed assetId, uint256 totalAmount, uint256 timestamp);
-  event RentClaimed(bytes32 indexed assetId, address indexed user, uint256 amount);
-  ```
-
-- 具体采用：  
-  - 「主动领取模型」（pull）→ 为每个用户记录可领取金额；  
-  - 或「批量分发模型」（push）→ 延续当前批量结构即可。  
-
-**不上链但要在 SAAS 做的：**
-
-- 租户层合同与账单（租户姓名、租期、违约条款等）  
-- 线下/法币部分租金与手续费的精细账务（链上只需一个总额充值映射）  
-
-**对现有合约的影响：**
-
-- 尽量通过新增函数 + 新事件实现，不破坏已发布接口。  
-- 如已有 `houseId` 等字段，可通过 `assetId = keccak256(houseId)` 映射，保持兼容。  
-
----
-
-## 4. 从合约视角再看 SAAS 层
-
-### 4.1 现有合约已覆盖的链上职责
-
-- `PropertyTokenFactory`：房产代币创建  
-- `PropertyToken`：持仓、分红、部分赎回逻辑  
-- `Treasury`：资金池、策略管理、提款  
-- `RentCustodyContract`：租金托管与分发  
-- `RedemptionManager`：赎回流程资金管理  
-- `TradeContract`：OTC/订单撮合交易  
-- `AbleToken + StakingAuthorization`：机构质押与授权  
-
-这些主要覆盖了 **「投资端 + 资金端」** 的链上逻辑。
-
-### 4.2 结合 SAAS 层，现在缺的链上“桥梁”
-
-1. **资产生命周期与 PropertyToken 之间的桥** → `AssetRegistry`  
-2. **合规 / KYC/KYB 的统一校验点** → `ComplianceRegistry`  
-3. **机构身份与 Staking 的显式绑定** → 扩展 `StakingAuthorization` 为 `InstitutionRegistry`  
-
-这三块补上之后，SAAS 的「资产全流程 + 机构协同」就能在链上形成可验证的最小状态集。
-
----
-
-## 5. 落地实施建议
-
-1. **更新架构图**：  
-   在原有合约架构图上增加 `AssetRegistry` / `ComplianceRegistry` / `InstitutionRegistry`，并标注这些合约与 SAAS 模块（资产端 / 评估 / 律师 / 节点 / 账户中心）的对应关系。
-
-2. **从最小改动版本开始实现**：  
-   - v1：优先上线 `AssetRegistry + ComplianceRegistry`，在 `Factory / Trade / RedemptionManager` 中通过 `require` 方式接入，不改原接口签名。  
-   - v2：进一步拓展 `StakingAuthorization` → `InstitutionRegistry`，再精细化租金托管部分。  
-
-3. **配合 SAAS API 设计**：  
-   - 为每个核心按钮（提交资产、通过审核、确认上链、发起分红等）明确：  
-     - 是否调用链上合约  
-     - 调用哪个新函数  
-     - 需要同步哪些 `assetId` / hash / 状态到链上  
-   - 形成一份「SAAS API ↔ 合约调用点对照表」，便于前后端与合约开发统一。
-
----
-
-> 本文档可以作为「RWA-HUSD 合约架构与 SAAS 层结合设计说明」，后续可在此基础上进一步细化为：  
-> - `AssetRegistry` / `ComplianceRegistry` / `InstitutionRegistry` 的完整 Solidity 接口与实现草案；  
-> - SAAS REST / GraphQL API 与合约交互的映射清单。
-
----
-
-## 6. 统一合规入口详细设计（基于 ERC3643）
-
-### 6.1 设计原则与分阶段路线图
+### 3.1 设计原则与分阶段路线图
 - 使用现有 `serverId` 直接作为 `assetId`（`bytes32`）传入链上，无需新增资产登记合约或额外 ID 体系。  
 - 法律 / 估值 / 确权流程均在 SAAS 层完成，仅将结果型状态或哈希透出；合约只做校验与授权。  
 - 暂不引入节点运营商与质押流程，接口预留扩展。  
@@ -438,7 +234,7 @@ struct Institution {
   - Phase 2：模块化合规框架 `ComplianceRegistry` + 插件式模块。  
   - Phase 3：声明/凭证体系（可选），用于更精细的资格验证。
 
-### 6.2 Phase 1: 增强型 UserRegistry
+### 3.2 Phase 1: 增强型 UserRegistry
 目标：在保持布尔 KYC 兼容的前提下，增加合规维度，并提供统一查询入口。
 
 **数据结构与接口示例（Solidity）：**
@@ -489,7 +285,7 @@ interface IUserRegistryV2 {
 - 字段打包到单个 `UserProfile`，使用 `uint8/uint16/uint64`。  
 - 只在必要时写入 storage，读操作可标记 `view` 并使用 `memory` 返回原因字符串。
 
-### 6.3 Phase 2: 模块化合规框架
+### 3.3 Phase 2: 模块化合规框架
 目标：引入类似 ERC3643 的可插拔模块，但简化适配 RWA 需求。
 
 **核心接口与数据结构：**
@@ -548,7 +344,7 @@ contract ComplianceRegistry {
 - `reason` 文本使用短字符串或错误码（`bytes4`）以减小返回 gas，前端映射文案。  
 - `assetId` 直接使用现有 `serverId` hash，避免重复存储。
 
-### 6.4 Phase 3: 声明系统（可选）
+### 3.4 Phase 3: 声明系统（可选）
 目标：在不引入 ERC734/735 全量开销的前提下，提供简化版可信声明，用于更细粒度合规。
 
 **核心概念：**
@@ -580,7 +376,7 @@ interface IClaimRegistry {
 - `Claim` 结构紧凑（2*uint64 + address + bytes32），可压缩到两个 storage slot。  
 - 仅受信发行人可写，减少滥用。
 
-### 6.5 与现有合约的集成点
+### 3.5 与现有合约的集成点
 - `UserRegistry`：增加 V2 存储与接口，保留旧 ABI，不影响现有布尔校验调用。  
 - `PropertyToken`：新增 `bytes32 assetId` 成员；在 `_beforeTokenTransfer` 中调用 `ComplianceRegistry.check`；保留老逻辑可通过开关跳过。  
 - `TradeContract`：下单/成交入口添加合规钩子；对于未开启强制的资产，失败时仅记录事件。  
@@ -588,7 +384,7 @@ interface IClaimRegistry {
 - **数据纽带**：所有调用统一使用 `assetId`（= `serverId` 的 keccak），无需新建 `AssetRegistry`。  
 - **SAAS 配置**：由后端面板管理“资产开关 + 规则集 + 可信发行人”，链上函数提供 `onlyAdmin`/`onlyRole` 控制。
 
-### 6.6 可选强制机制设计
+### 3.6 可选强制机制设计
 - **全局级别**：`ComplianceRegistry.globalOptional`；关闭后所有资产强制执行。  
 - **资产级别**：`assetEnforcement[assetId]`；可针对高风险资产单独开启强制。  
 - **过渡模式**：  
@@ -597,9 +393,167 @@ interface IClaimRegistry {
   3) 最终可关闭全局 Optional，进入全面合规模式。  
 - **回滚预案**：保留管理员紧急开关，在出现误封时可快速恢复为可选模式。
 
-### 6.7 实施建议与权衡
+### 3.7 实施建议与权衡
 - **渐进上线**：Phase 1 先升级 `UserRegistry`，其余合约仅新增可选钩子，不改变既有接口签名。  
 - **升级方式**：若采用 UUPS/Proxy，新增存储布局时在末尾添加 `UserProfile` 映射和配置开关，避免存储冲突；若不可升级，可部署 V2 注册表并在业务合约中优先读取 V2，兼容旧布尔接口。  
 - **成本与收益**：Phase 1 改动最小，立即提供基础画像；Phase 2 引入模块化使高风险资产可定制；Phase 3 仅在需要“可携带证明”时开启，避免无谓存储。  
 - **性能**：重点放在读路径轻量化（小数组模块、短错误码、位宽压缩）；写路径由运营后端批量执行，可接受更高成本。  
-- **安全**：所有管理入口保留 `onlyAdmin/onlyRole` 与事件日志；模块合约需经过审计或复用模板，避免自定义模块带来的安全风险。
+- **安全**：所有管理入口保留 `onlyAdmin/onlyRole` 与事件日志；模块合约需经过审计或复用模板，避免自定义模块带来的安全风险。  
+
+---
+
+## 4. 从合约视角再看 SAAS 层
+
+### 4.1 现有合约已覆盖的链上职责
+
+- `PropertyTokenFactory`：房产代币创建  
+- `PropertyToken`：持仓、分红、部分赎回逻辑  
+- `Treasury`：资金池、策略管理、提款  
+- `RentCustodyContract`：租金托管与分发  
+- `RedemptionManager`：赎回流程资金管理  
+- `TradeContract`：OTC/订单撮合交易  
+- `AbleToken + StakingAuthorization`：机构质押与授权  
+
+这些主要覆盖了 **「投资端 + 资金端」** 的链上逻辑。
+
+### 4.2 结合 SAAS 层，现在的核心与扩展路径
+
+- 当前核心：`ComplianceRegistry`（含 UserRegistry V2 + 模块化合规）作为唯一合规 / KYC/KYB 校验点，交易、发行、赎回统一走这一入口。  
+- 资产生命周期与机构身份管理：作为未来扩展（见 Section 6），在 Phase 1-3 合规落稳后按需要引入 `AssetRegistry` / `InstitutionRegistry`，补足资产状态与机构质押的链上证明。  
+- 租金/分红扩展：保持可选，优先保证合规入口落地与运行数据，再迭代现金流托管与分发逻辑。
+
+---
+
+## 5. 落地实施建议
+
+基于 Section 3 的三阶段合规设计，建议按以下路径推进：
+
+- **Phase 1：UserRegistry 升级为 V2（最小合规）**  
+  - 保留布尔接口，新增画像字段与 `isEligibleForInvestment/Redemption`。  
+  - 在 `TradeContract` / `PropertyToken` / `RedemptionManager` 入口增加可选合规开关。  
+- **Phase 2：上线 `ComplianceRegistry` + 模块化框架**  
+  - 实现最小规则模块（如 CountryRestriction、InvestorTypeRestriction），提供资产级配置与全局/资产强制开关。  
+  - 在 `_beforeTokenTransfer`、撮合、赎回路径接入 `check` 并支持可选跳过事件。  
+- **Phase 3：声明系统（可选）**  
+  - 引入 `ClaimRegistry` 与可信发行人管理，模块查询声明提升合规精度。  
+  - 仅在需要可携带证明或分区市场时开启，避免不必要存储。  
+- **配套工作**  
+  - 更新架构图与 SAAS API 对照表，标注各按钮对应的合约调用与开关。  
+  - 先以可选模式观察 `ComplianceBypassed` 事件，再按资产逐步开启强制并保留紧急回滚开关。
+
+---
+
+## 6. 未来扩展：资产登记与机构管理系统
+
+> 这些设计作为未来扩展选项，依赖 Phase 1-3 的合规体系稳定运行后再考虑接入，当前阶段暂不实施。
+
+### 6.1 新合约：`AssetRegistry`
+
+**目标：** 在需要更强链上资产生命周期管理时，引入与 `PropertyToken` 绑定的登记合约。
+
+**核心数据结构示例：**
+
+```solidity
+struct AssetInfo {
+    bytes32 assetId;            // 业务侧 assetId 的 keccak
+    address propertyToken;      // 对应的 PropertyToken 合约
+    uint8 status;               // 枚举: 0 Draft, 1 ApprovedForToken, 2 OnchainActive, 3 Frozen, 4 Redeemed, 5 Defaulted
+    bytes32 legalOpinionHash;   // 律师意见文书 hash/IPFS CID
+    bytes32 valuationReportHash;// 评估报告 hash
+    bytes32 titleDeedHash;      // 核心确权文件 hash
+    uint256 lastValuation;      // 最近一次估值数值
+    uint64 valuationTime;       // 估值时间
+    address valuationProvider;  // 评估机构地址
+    address legalProvider;      // 律师事务所地址
+}
+```
+
+**关键函数：**
+
+- `registerAsset(bytes32 assetId, address legalProvider)`  
+  - 只能由 SAAS 后端 / 节点角色调用（`onlySystemOrNode`）  
+- `setLegalApproved(bytes32 assetId, bytes32 legalOpinionHash, bool approved)`  
+- `setValuation(bytes32 assetId, bytes32 valuationReportHash, uint256 value, address provider)`  
+- `setStatus(bytes32 assetId, Status newStatus)`  
+- `bindPropertyToken(bytes32 assetId, address propertyToken)`  
+
+**与现有合约的关系（如后续接入）：**
+
+- `PropertyTokenFactory.createPropertyToken(...)` 新增参数 `bytes32 assetId`：  
+  - 内部逻辑：  
+    - `AssetRegistry.status(assetId)` 必须为 `APPROVED_FOR_TOKENIZATION`  
+    - 创建成功后调用 `AssetRegistry.bindPropertyToken(assetId, tokenAddress)`  
+    - 将 `status` 改为 `ONCHAIN_ACTIVE`  
+- `PropertyToken` 内部保存 `bytes32 public assetId;`，便于其他合约查询  
+- `RedemptionManager`、`RentCustodyContract`、`Treasury` 可以基于 `assetId` 做资产粒度管理，而不只依赖 token 地址。
+
+补充说明：`AssetRegistry` 将 `assetId` 与 `PropertyToken` 以及 ApprovedForTokenization → OnchainActive → Frozen → Redeemed/Defaulted 的状态机强绑定，上链记录每个状态的结果与时间戳，便于在合规体系之上进一步完善资产生命周期的链上可验证性。
+
+---
+
+### 6.2 扩展 / 抽象：`StakingAuthorization` → `InstitutionRegistry`
+
+现有架构中已经有 `AbleToken` + `StakingAuthorization` 做机构质押与授权，未来若需要显式机构类型与元数据映射，可扩展为独立注册表。
+
+**新增机构维度信息：**
+
+```solidity
+enum InstitutionType { Unknown, LawFirm, AppraisalFirm, NodeOperator, PropertyManager }
+
+struct Institution {
+    InstitutionType institutionType;
+    uint256 stakedAmount;      // ABLE 质押数量
+    bool active;
+    bytes32 metadataHash;      // 对应 SAAS 层机构表的 hash
+}
+```
+
+**提供查询接口：**
+
+- `isActiveInstitution(address)`  
+- `isLawFirm(address)` / `isAppraisalFirm(address)` / `isNodeOperator(address)` 等便捷方法  
+
+**对现有合约的影响（如接入）：**
+
+- 在 `AssetRegistry` 中设置 `legalProvider` / `valuationProvider` / `nodeOperator` 时：  
+  - 要求对应地址在 `InstitutionRegistry` 中 `active == true`，且类型匹配。  
+- `PropertyTokenFactory`：  
+  - 创建资产类 token 时要求调用方为某类机构（如 NodeOperator）或平台管理员。  
+- 与现有 `StakingAuthorization` 的兼容：  
+  - 可通过 UUPS 升级扩展存储，不破坏现有接口；  
+  - 或新增独立 `InstitutionRegistry` 合约，由老合约引用。  
+
+---
+
+### 6.3 租金 / 分红：扩展 `RentCustodyContract` 或新建 `CashflowManager`
+
+结合 SAAS 中的「租金缴纳」「资产运营看板」「托管列表」，以及现有 `Treasury` + 租金托管合约的设计，未来可按需增强：
+
+**合约层保留 / 增加：**
+
+- 按 `assetId` 维度管理余额，而不仅仅是 token：
+
+  ```solidity
+  mapping(bytes32 => HouseBalance) public houseBalances;
+  ```
+
+- 分发时增加事件：
+
+  ```solidity
+  event RentDistributed(bytes32 indexed assetId, uint256 totalAmount, uint256 timestamp);
+  event RentClaimed(bytes32 indexed assetId, address indexed user, uint256 amount);
+  ```
+
+- 具体采用：  
+  - 「主动领取模型」（pull）→ 为每个用户记录可领取金额；  
+  - 或「批量分发模型」（push）→ 延续当前批量结构即可。  
+
+**不上链但要在 SAAS 做的：**
+
+- 租户层合同与账单（租户姓名、租期、违约条款等）  
+- 线下/法币部分租金与手续费的精细账务（链上只需一个总额充值映射）  
+
+**对现有合约的影响：**
+
+- 尽量通过新增函数 + 新事件实现，不破坏已发布接口。  
+- 如已有 `houseId` 等字段，可通过 `assetId = keccak256(houseId)` 映射，保持兼容。  
